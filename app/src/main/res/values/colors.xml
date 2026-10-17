@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      仅用于自适应启动图标（adaptive icon）的背景层，属于美术资源，不是界面配色。
+      界面配色一律由 Compose 主题令牌提供。
+      深灰蓝底，和界面背景同一色系，避免图标在桌面上显得突兀。
+    -->
+    <color name="ic_launcher_background">#0B1116</color>
+</resources>

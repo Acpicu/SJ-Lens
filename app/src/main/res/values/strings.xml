@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用显示名：统一用项目英文名 -->
+    <string name="app_name">SJ Lens</string>
+</resources>

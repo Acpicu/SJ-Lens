@@ -1,0 +1,106 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "gradle: 编译 Debug APK",
+      "type": "shell",
+      "command": "${workspaceFolder}\\gradlew.bat",
+      "args": ["assembleDebug", "--console=plain"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "gradle: 编译 Release APK（未签名）",
+      "type": "shell",
+      "command": "${workspaceFolder}\\gradlew.bat",
+      "args": ["assembleRelease", "--console=plain"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "gradle: 清理构建产物",
+      "type": "shell",
+      "command": "${workspaceFolder}\\gradlew.bat",
+      "args": ["clean", "--console=plain"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "adb: 设备列表",
+      "type": "shell",
+      "command": "adb",
+      "args": ["devices", "-l"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "adb: 安装 APK（adb install -r）",
+      "type": "shell",
+      "command": "adb",
+      "args": ["install", "-r", "${input:apkPath}"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "adb: 截图回传（screenshots/shot-时间戳.png）",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$n = Get-Date -Format 'yyyyMMdd-HHmmss'; New-Item -ItemType Directory -Force -Path 'screenshots' | Out-Null; cmd /c \"adb exec-out screencap -p > screenshots\\shot-$n.png\"; if (Test-Path \"screenshots/shot-$n.png\") { Write-Host \"已保存 screenshots/shot-$n.png\" } else { Write-Host '截图失败：请先确认 adb devices 能看到设备' }"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "adb: 清空 logcat",
+      "type": "shell",
+      "command": "adb",
+      "args": ["logcat", "-c"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "adb: 抓取崩溃日志（logcat -b crash）",
+      "type": "shell",
+      "command": "adb",
+      "args": ["logcat", "-b", "crash", "-d", "-v", "time"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "git: 状态",
+      "type": "shell",
+      "command": "git",
+      "args": ["status", "--short", "--branch"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "git: 最近 10 条提交（断档恢复用）",
+      "type": "shell",
+      "command": "git",
+      "args": ["log", "-10", "--pretty=format:%h %ad %s", "--date=short"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "云端构建：手动触发工作流（需已配置 gh 或 git push）",
+      "type": "shell",
+      "command": "git",
+      "args": ["push", "origin", "HEAD"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "apkPath",
+      "type": "promptString",
+      "description": "APK 文件路径（从 GitHub Actions 构建产物或 Release 下载）",
+      "default": "${workspaceFolder}\\app\\build\\outputs\\apk\\debug\\app-debug.apk"
+    }
+  ]
+}

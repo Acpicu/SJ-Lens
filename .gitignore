@@ -1,0 +1,35 @@
+# ── 构建产物 ──
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+output.json
+
+# ── 本地环境（不入库）──
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ── 签名密钥：铁律，绝不入库（规格第十五章）──
+*.jks
+*.keystore
+keystore.properties
+release.keystore
+
+# ── 系统与编辑器 ──
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ── 日志与临时文件 ──
+*.log
+logs/
+_scratch/

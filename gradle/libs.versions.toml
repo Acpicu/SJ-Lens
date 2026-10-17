@@ -1,0 +1,39 @@
+# 版本目录：所有依赖版本集中在此，禁止在模块脚本里写死版本号。
+# 新增依赖前必须先说明必要性并经开发者确认（规格第二十章）。
+
+[versions]
+agp = "8.13.2"
+kotlin = "2.4.21"
+coreKtx = "1.18.0"
+activityCompose = "1.13.0"
+# 版本上限由 AAR 元数据决定：compose-ui 1.12.1 与 lifecycle 2.11.0 要求 AGP 9.1.0 / compileSdk 37，
+# 而本机 SDK 最高只到 android-36、AGP 8.13.2 最高推荐 compileSdk 36。
+# 因此锁定在仍满足 minAgpVersion=8.6.0 的最后一批版本上。
+composeBom = "2026.06.01"
+lifecycle = "2.10.0"
+# navigation-compose 2.10.0 起要求 AGP 9.1.0 / compileSdk 37，故锁在 2.9.5
+navigation = "2.9.5"
+work = "2.10.5"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+
+# Compose 统一由 BOM 约束版本，各构件不单独写版本
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+# 图标包。Material3 1.4 起不再传递依赖它，底部导航要用图标必须显式声明。
+# 版本由 BOM 固定为 1.7.8（该库已冻结），不随 compose-ui 升级。
+androidx-compose-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

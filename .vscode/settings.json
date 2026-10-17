@@ -1,0 +1,48 @@
+{
+  // ── 编码与换行：全仓库统一 UTF-8 + LF（gradlew 在 Windows 上必须保持 LF）──
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  // ── 隐藏构建产物与密钥，避免误提交、误搜索 ──
+  "files.exclude": {
+    "**/.gradle": true,
+    "**/build": true,
+    "**/.idea": true,
+    "**/local.properties": true,
+    "**/*.jks": true,
+    "**/*.keystore": true
+  },
+  "search.exclude": {
+    "**/.gradle": true,
+    "**/build": true,
+    "**/.git": true
+  },
+
+  // ── 缩进：Kotlin 4 空格，配置文件 2 空格；由 .editorconfig 兜底 ──
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "editor.rulers": [120],
+  "editor.formatOnSave": false,
+  "[json]": { "editor.tabSize": 2 },
+  "[jsonc]": { "editor.tabSize": 2 },
+  "[yaml]": { "editor.tabSize": 2 },
+  "[xml]": { "editor.tabSize": 4 },
+  "[markdown]": { "editor.tabSize": 2, "files.trimTrailingWhitespace": false },
+
+  // ── 本地不装 JDK/SDK，构建走云端：关闭 Gradle 自动导入，避免满屏报错 ──
+  "gradle.autoDetect": "off",
+  "gradle.nestedProjects": true,
+  "java.import.gradle.enabled": false,
+
+  // ── Git：不自动抓取，提交动作由开发者本人执行 ──
+  "git.autofetch": false,
+  "git.enableSmartCommit": false,
+  "git.confirmSync": true,
+
+  // ── 遥测全关（规格第十七章：不接入任何统计 SDK）──
+  "telemetry.telemetryLevel": "off",
+  "redhat.telemetry.enabled": false
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Activity 的窗口主题。界面本身完全由 Compose 绘制，这里只负责窗口装饰：
+      不要系统标题栏，让 Compose 自己管理边到边（edge-to-edge）与深色模式。
+      minSdk 为 26，Theme.Material 自 API 21 起可用。
+    -->
+    <style name="Theme.SJFollowClip" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
