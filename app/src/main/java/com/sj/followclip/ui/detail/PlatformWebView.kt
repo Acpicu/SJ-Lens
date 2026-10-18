@@ -155,6 +155,10 @@ fun PlatformWebView(
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
+                            // 这两项必须开：否则页面按窄视口排版，
+                            // 抖音会直接渲染成「请下载 App」的引导页，没有作品网格
+                            settings.useWideViewPort = true
+                            settings.loadWithOverviewMode = true
                             settings.userAgentString = (settings.userAgentString ?: "")
                                 .replace("; wv", "")
                                 .replace(" Version/4.0", "")

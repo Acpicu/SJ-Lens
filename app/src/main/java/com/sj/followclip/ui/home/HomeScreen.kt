@@ -154,17 +154,20 @@ fun HomeScreen(
         )
 
         // 进度条占位：高度固定，检查开始/结束都不会让下面的卡片跳一下。
-        // 这是刻意的 —— 高度随内容变化会让整个首页抖一下，看着很廉价。
+        // 高度 = 条本身 + 一段留白：进度条贴着标题，同时和下面的卡片拉开距离，
+        // 否则会像「卡在卡片上」，看着很挤。
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(3.dp)
-                .padding(horizontal = Spacing.pageHorizontal)
+                .height(3.dp + Spacing.itemGap),
+            contentAlignment = Alignment.TopCenter
         ) {
             if (checking) {
                 TechProgressBar(
                     progress = progress,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.pageHorizontal),
                     height = 3.dp
                 )
             }
