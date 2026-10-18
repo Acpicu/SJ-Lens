@@ -55,6 +55,7 @@ import com.sj.followclip.ui.guide.markUsageGuideShown
 import com.sj.followclip.ui.guide.shouldShowUsageGuide
 import com.sj.followclip.ui.home.HomeScreen
 import com.sj.followclip.ui.manual.FieldManualScreen
+import com.sj.followclip.ui.notes.NotesScreen
 import com.sj.followclip.ui.osint.ExposureAuditScreen
 import com.sj.followclip.ui.record.DataRecordScreen
 import com.sj.followclip.ui.preview.FakeData
@@ -90,12 +91,15 @@ object Routes {
     const val PLATFORM_VIDEOS = "person/{$ARG_PERSON_ID}/account/{$ARG_ACCOUNT_ID}"
     const val PERSON_EVIDENCE = "person/{$ARG_PERSON_ID}/evidence"
     const val PERSON_REPORT = "person/{$ARG_PERSON_ID}/report"
+    const val PERSON_NOTES = "person/{$ARG_PERSON_ID}/notes"
 
     fun person(personId: Long): String = "person/$personId"
 
     fun evidence(personId: Long): String = "person/$personId/evidence"
 
     fun report(personId: Long): String = "person/$personId/report"
+
+    fun notes(personId: Long): String = "person/$personId/notes"
 
     fun addAccount(personId: Long): String = "person/$personId/addAccount"
 
@@ -296,7 +300,22 @@ fun AppNavigation() {
                     onDeleteAccount = { accountId ->
                         AppUiState.removeAccount(personId, accountId)
                     },
-                    onOpenEvidence = { id -> navController.navigate(Routes.evidence(id)) }
+                    onOpenEvidence = { id -> navController.navigate(Routes.evidence(id)) },
+                    onOpenNotes = { id -> navController.navigate(Routes.notes(id)) }
+                )
+            }
+
+            composable(
+                route = Routes.PERSON_NOTES,
+                arguments = listOf(
+                    navArgument(Routes.ARG_PERSON_ID) { type = NavType.LongType }
+                )
+            ) { entry ->
+                val personId = entry.arguments?.getLong(Routes.ARG_PERSON_ID) ?: 0L
+                NotesScreen(
+                    personId = personId,
+                    personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
+                    onBack = { navController.popBackStackSafely() }
                 )
             }
 

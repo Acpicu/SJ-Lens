@@ -52,7 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.sj.followclip.data.local.NoteStore
+import com.sj.followclip.data.local.QuickNoteStore
 import com.sj.followclip.domain.model.Account
 import com.sj.followclip.domain.model.Person
 import com.sj.followclip.domain.model.totalUnread
@@ -64,6 +64,9 @@ import com.sj.followclip.ui.theme.textMuted
 import com.sj.followclip.util.AvatarStore
 import com.sj.followclip.util.formatCount
 import com.sj.followclip.util.relativeTime
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * 人物（文件夹）内部：这个人 + 他在各平台的账号。
@@ -81,6 +84,7 @@ fun PersonDetailScreen(
     onAccountClick: (Account) -> Unit,
     onDeleteAccount: (Long) -> Unit,
     onOpenEvidence: (Long) -> Unit,
+    onOpenNotes: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 账号列表直接取传入的数据，删除通过回调交给上层改状态，界面自动刷新
@@ -139,7 +143,10 @@ fun PersonDetailScreen(
             }
 
             item {
-                NoteCard(personId = person.id)
+                QuickCaptureCard(
+                    personId = person.id,
+                    onOpenAll = { onOpenNotes(person.id) }
+                )
             }
 
             item {
@@ -400,15 +407,16 @@ private fun AccountCard(
 }
 
 /**
- * 笔记卡：每个文件夹一条自由文本，用于记观察结论和待验证线索。
+ * 速记卡：一行输入 + 一个「记」按钮，最近三条直接显示，其余进「速记本」。
  *
- * 只在点「保存」时落盘，避免边打字边写；清空需要二次确认在长按删除逻辑之外，这里直接清。
+ * 这里刻意不做必填项、不做等级、不做哈希 —— 随手记要足够快。
  */
 @Composable
-private fun NoteCard(personId: Long) {
+private fun QuickCaptureCard(personId: Long, onOpenAll: () -> Unit) {
     val context = LocalContext.current
-    var text by remember(personId) { mutableStateOf(NoteStore.load(context, personId)) }
-    var saved by remember(personId) { mutableStateOf(NoteStore.hasNotes(context, personId)) }
+    var notes by remember(personId) { mutableStateOf(QuickNoteStore.list(context, personId)) }
+    var text by remember { mutableStateOf("") }
+    val fmt = remember { SimpleDateFormat("MM-dd HH:mm", Locale.US) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -418,52 +426,67 @@ private fun NoteCard(personId: Long) {
         Column(modifier = Modifier.padding(Spacing.cardPadding)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "笔记",
+                    text = "速记",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.textMuted
                 )
                 Spacer(Modifier.width(Spacing.itemGap))
                 Text(
-                    text = if (saved) "已保存" else "未保存",
+                    text = "共 ${notes.size} 条",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (saved) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.textMuted
+                    color = MaterialTheme.colorScheme.textMuted
+                )
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onOpenAll) { Text("速记本") }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text("一句话记下来") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(Spacing.itemGap))
+                TextButton(
+                    enabled = text.isNotBlank(),
+                    onClick = {
+                        notes = QuickNoteStore.add(context, personId, text)
+                        text = ""
                     }
+                ) { Text("记") }
+            }
+
+            notes.take(3).forEach { note ->
+                Spacer(Modifier.height(Spacing.itemGap))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = note.kind,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(Spacing.tinyGap))
+                    Text(
+                        text = fmt.format(Date(note.at)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.textMuted
+                    )
+                }
+                Text(
+                    text = note.text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            Spacer(Modifier.height(Spacing.itemGap))
-
-            OutlinedTextField(
-                value = text,
-                onValueChange = {
-                    text = it
-                    saved = false
-                },
-                label = { Text("观察记录 / 待验证线索") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 96.dp)
-            )
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(
-                    onClick = {
-                        NoteStore.save(context, personId, text)
-                        saved = text.isNotBlank()
-                    }
-                ) { Text("保存") }
-
-                TextButton(
-                    enabled = text.isNotBlank() || saved,
-                    onClick = {
-                        NoteStore.clear(context, personId)
-                        text = ""
-                        saved = false
-                    }
-                ) { Text("清空", color = MaterialTheme.colorScheme.error) }
+            if (notes.isEmpty()) {
+                Spacer(Modifier.height(Spacing.itemGap))
+                Text(
+                    text = "还没记过。比如「10/19 发了 1 条，晚上 9 点」。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.textMuted
+                )
             }
         }
     }
@@ -478,7 +501,8 @@ private fun PersonDetailScreenPreview() {
             onBack = {},
             onAccountClick = {},
             onDeleteAccount = {},
-            onOpenEvidence = {}
+            onOpenEvidence = {},
+            onOpenNotes = {}
         )
     }
 }
