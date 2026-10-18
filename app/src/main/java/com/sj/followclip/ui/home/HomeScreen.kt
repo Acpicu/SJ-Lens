@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,11 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sj.followclip.data.source.bili.BiliChecker
 import com.sj.followclip.data.source.web.WebViewChecker
 import com.sj.followclip.domain.model.Platform
 import com.sj.followclip.domain.model.Person
+import com.sj.followclip.ui.common.TechProgressBar
 import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.state.AppUiState
 import com.sj.followclip.ui.theme.SJFollowClipTheme
@@ -151,12 +154,21 @@ fun HomeScreen(
             onCheckAll = { performCheck(includeWeb = true) }
         )
 
-        // 检查进度：两个阶段（B站 / 抖音快手）合起来算总进度
-        if (checking) {
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth()
-            )
+        // 进度条占位：高度固定，检查开始/结束都不会让下面的卡片跳一下。
+        // 这是刻意的 —— 高度随内容变化会让整个首页抖一下，看着很廉价。
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .padding(horizontal = Spacing.pageHorizontal)
+        ) {
+            if (checking) {
+                TechProgressBar(
+                    progress = progress,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 3.dp
+                )
+            }
         }
 
         if (persons.isEmpty()) {
