@@ -55,8 +55,13 @@ object WebViewChecker {
             settings.userAgentString = (settings.userAgentString ?: "")
                 .replace("; wv", "")
                 .replace(" Version/4.0", "")
-            // 透明但按真实尺寸渲染：视口太小站点会渲染成空壳，什么都抓不到
-            alpha = 0f
+            // 必须可见性设为 INVISIBLE 而不是 alpha = 0：
+            // alpha = 0 的 View 仍然会接收触摸事件，铺满全屏会把整个界面点死。
+            // INVISIBLE 不参与绘制也不接收触摸，但依然会被测量布局，
+            // 视口尺寸正常，页面照常渲染 —— 这才是我们要的「隐形但工作」。
+            visibility = android.view.View.INVISIBLE
+            isClickable = false
+            isFocusable = false
         }
 
         // 必须铺满窗口（真实视口）才会渲染出内容；

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +68,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     var checking by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
+    var progress by remember { mutableStateOf(0f) }
 
     // 管理模式下拦截系统返回：手势返回或返回键都先退出管理模式
     BackHandler(enabled = manageMode) { manageMode = false }
@@ -79,13 +81,30 @@ fun HomeScreen(
      */
     fun performCheck(includeWeb: Boolean) {
         if (checking) return
+
+        // 先把本轮要做的事算清楚，进度条才知道总进度
+        val webJobs = if (includeWeb) {
+            persons.flatMap { person ->
+                person.accounts
+                    .filter { it.platform != Platform.BILI && it.homepageUrl.isNotBlank() }
+                    .map { person.id to it }
+            }
+        } else {
+            emptyList()
+        }
+        // 两个阶段：1) B站  2) 抖音/快手。没有第二类账号时只算一个阶段
+        val phaseCount = if (webJobs.isEmpty()) 1 else 2
+
         scope.launch {
             checking = true
+            progress = 0f
             status = "检查中…"
             var added = 0
 
             BiliChecker.checkAll(context, persons) { done, total ->
-                status = "B站 $done/$total"
+                val safeTotal = total.coerceAtLeast(1)
+                status = "B站 $done/$safeTotal"
+                progress = (done.toFloat() / safeTotal) / phaseCount
             }.onSuccess { results ->
                 results.forEach { r ->
                     AppUiState.setUnread(r.personId, r.accountId, r.newCount)
@@ -95,25 +114,22 @@ fun HomeScreen(
                 status = it.message ?: "B站检查失败"
             }
 
-            if (includeWeb) {
-                val webJobs = persons.flatMap { person ->
-                    person.accounts
-                        .filter { it.platform != Platform.BILI && it.homepageUrl.isNotBlank() }
-                        .map { person.id to it }
-                }
-                val activity = context as? Activity
-                if (webJobs.isNotEmpty() && activity != null) {
-                    WebViewChecker.checkAll(activity, webJobs) { done, total ->
-                        status = "抖音/快手 $done/$total"
-                    }.forEach { r ->
-                        AppUiState.setUnread(r.personId, r.accountId, r.newCount)
-                        added += r.newCount
-                    }
+            val activity = context as? Activity
+            if (webJobs.isNotEmpty() && activity != null) {
+                progress = 1f / phaseCount
+                WebViewChecker.checkAll(activity, webJobs) { done, total ->
+                    val safeTotal = total.coerceAtLeast(1)
+                    status = "抖音/快手 $done/$safeTotal"
+                    progress = (1f + done.toFloat() / safeTotal) / phaseCount
+                }.forEach { r ->
+                    AppUiState.setUnread(r.personId, r.accountId, r.newCount)
+                    added += r.newCount
                 }
             }
 
             status = if (added > 0) "本次新增 $added 条" else "没有新更新"
             checking = false
+            progress = 0f
             // 结果只停留 3 秒，随后让位给 OSINT
             delay(3000)
             status = ""
@@ -134,6 +150,14 @@ fun HomeScreen(
             onToggleManage = { manageMode = !manageMode },
             onCheckAll = { performCheck(includeWeb = true) }
         )
+
+        // 检查进度：两个阶段（B站 / 抖音快手）合起来算总进度
+        if (checking) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         if (persons.isEmpty()) {
             EmptyHome(modifier = Modifier.weight(1f))
