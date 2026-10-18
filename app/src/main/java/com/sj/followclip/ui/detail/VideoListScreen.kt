@@ -155,24 +155,8 @@ fun PlatformVideosScreen(
                     }
                     newDynCount = fresh.size
                     VideoSnapshotStore.save(context, accountId, list.map { it.id }.take(60), "dyn")
-
-                    if (fresh.isNotEmpty() && personId > 0L) {
-                        PendingStore.addAll(
-                            context,
-                            fresh.map { d ->
-                                PendingItem(
-                                    bvid = d.id,
-                                    title = d.text.take(80),
-                                    personId = personId,
-                                    personName = personName,
-                                    platform = "BILI",
-                                    coverUrl = d.coverUrl,
-                                    kind = "DYNAMIC",
-                                    foundAt = System.currentTimeMillis()
-                                )
-                            }
-                        )
-                    }
+                    // 「最近检查」页统一由检查流程写入，这里只负责本页计数，
+                    // 否则单独刷一个账号会把整轮的汇总结果冲掉。
                 }
                 .onFailure { dynError = it.message ?: "动态抓取失败" }
             dynLoading = false
@@ -304,11 +288,22 @@ fun PlatformVideosScreen(
                 }
 
                 videos.isEmpty() -> Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(Spacing.pageHorizontal),
                     contentAlignment = Alignment.Center
                 ) {
+                    // 明确区分三种情况，避免用户看到「暂无内容」不知道哪里错了
                     Text(
-                        text = if (uid == null || !isBili) "暂无内容" else "点上面的「检查更新」拉一次",
+                        text = when {
+                            !isBili -> "${platform?.displayName} 暂未接入"
+                            uid == null -> "没从这个地址里认出 B站 UID。\n" +
+                                "请删掉这个账号，重新添加时直接填 UID 数字，\n" +
+                                "或者粘贴 space.bilibili.com 开头的主页链接。\n\n" +
+                                "当前填的是：${account?.homepageUrl.orEmpty()}"
+                            error != null -> error.orEmpty()
+                            else -> "点上面的「检查更新」拉一次"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.textMuted
                     )

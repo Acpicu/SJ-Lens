@@ -120,9 +120,10 @@ fun HomeScreen(
         }
     }
 
-    // 进应用自动查一次 B站，用户不用手动点
+    // 进应用自动查一轮，包含抖音/快手。
+    // 只查 B站 的话，这两类文件夹的「上次抓取」永远停在旧时间，看着像没检查。
     LaunchedEffect(Unit) {
-        if (persons.isNotEmpty()) performCheck(includeWeb = false)
+        if (persons.isNotEmpty()) performCheck(includeWeb = true)
     }
 
     Column(modifier = modifier.fillMaxSize()) {

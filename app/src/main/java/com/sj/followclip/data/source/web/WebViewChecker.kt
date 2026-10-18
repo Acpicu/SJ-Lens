@@ -63,6 +63,8 @@ object WebViewChecker {
 
         jobs.forEachIndexed { index, (personId, account) ->
             val url = account.homepageUrl.trim()
+            var freshCount = 0
+
             if (url.isNotEmpty()) {
                 val ids = fetchIds(webView, url)
                 if (ids.isNotEmpty()) {
@@ -73,9 +75,14 @@ object WebViewChecker {
                         ids.filter { it !in known }.toSet()
                     }
                     VideoSnapshotStore.save(activity, account.id, ids.take(60), "dy")
-                    results += AccountCheckResult(personId, account.id, fresh.size)
+                    freshCount = fresh.size
                 }
             }
+
+            // 不管抓没抓到都回一条结果。
+            // 否则界面拿不到「这个账号检查过了」的信号，卡片上的「上次抓取」
+            // 就永远停在旧时间，看起来像没检查。
+            results += AccountCheckResult(personId, account.id, freshCount)
             onProgress(index + 1, jobs.size)
         }
 

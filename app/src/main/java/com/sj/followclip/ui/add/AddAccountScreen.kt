@@ -140,10 +140,14 @@ fun AddAccountScreen(
 
             Button(
                 onClick = {
-                    val normalized = normalizeUrl(link)
+                    val normalized = normalizeUrl(link, platform)
                     when {
                         link.isBlank() -> hint = "还没粘链接。先把主页链接粘到上面"
-                        normalized == null -> hint = "这不像一个主页链接。请粘贴形如 https://... 的地址"
+                        normalized == null -> hint = if (platform == Platform.BILI) {
+                            "请填 B站 UID（纯数字），或粘贴主页链接"
+                        } else {
+                            "这不像一个主页链接，请粘贴形如 https://... 的地址"
+                        }
                         else -> {
                             hint = null
                             onAdd(platform, label, normalized)
@@ -169,10 +173,21 @@ fun AddAccountScreen(
  *
  * 判不出来返回 null，由界面提示用户，而不是存一条打不开的地址。
  */
-private fun normalizeUrl(raw: String): String? {
+private fun normalizeUrl(raw: String, platform: Platform): String? {
     var text = raw.trim()
     if (text.isEmpty()) return null
 
+    // 纯数字：B站 用户习惯直接填 UID，这里自动拼成空间地址。
+    // 别的平台没这个约定，直接拒绝并让用户粘链接。
+    if (text.all { it.isDigit() }) {
+        return if (platform == Platform.BILI && text.length in 1..12) {
+            "https://space.bilibili.com/$text"
+        } else {
+            null
+        }
+    }
+
+    // 分享文本里抽出第一条链接
     Regex("""https?://[^\s"'，。、；]+""").find(text)?.let { text = it.value }
 
     if (text.startsWith("http://")) text = "https://" + text.removePrefix("http://")

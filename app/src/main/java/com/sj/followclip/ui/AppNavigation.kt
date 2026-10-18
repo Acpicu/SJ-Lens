@@ -52,7 +52,7 @@ import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.settings.PlatformLoginScreen
 import com.sj.followclip.ui.settings.SettingsScreen
 import com.sj.followclip.ui.state.AppUiState
-import com.sj.followclip.ui.unconfirmed.UnconfirmedScreen
+import com.sj.followclip.ui.unconfirmed.LatestCheckScreen
 import com.sj.followclip.util.AvatarStore
 
 /**
@@ -94,7 +94,7 @@ private data class BottomNavItem(
 
 private val bottomNavItems = listOf(
     BottomNavItem(Routes.HOME, "首页", Icons.Filled.Home),
-    BottomNavItem(Routes.UNCONFIRMED, "待确认", Icons.Filled.Notifications),
+    BottomNavItem(Routes.UNCONFIRMED, "最近检查", Icons.Filled.Notifications),
     BottomNavItem(Routes.SETTINGS, "设置", Icons.Filled.Settings)
 )
 
@@ -204,7 +204,7 @@ fun AppNavigation() {
             }
 
             composable(Routes.UNCONFIRMED) {
-                UnconfirmedScreen()
+                LatestCheckScreen()
             }
 
             composable(Routes.SETTINGS) {

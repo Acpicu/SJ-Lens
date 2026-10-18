@@ -22,15 +22,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,20 +43,19 @@ import com.sj.followclip.ui.theme.textMuted
 import com.sj.followclip.util.relativeTime
 
 /**
- * 待确认：检查更新时发现、但用户还没处理的新视频。
+ * 最近一轮检查的结果。
  *
- * 数据来自 [PendingStore]，按人分组。带封面缩略图 —— 光看标题判断不了更新了什么，
- * 一眼扫封面才是这个应用该有的效率。
+ * 每次检查**整体覆盖**，不需要手动确认或清理 —— 打开看到的永远是
+ * 「这一次检查发现了什么」，不会越堆越多。
  *
- * 点整行去 B 站 App 看，点右侧的勾表示「这条我看过了」，从列表移除。
+ * 数据只来自 B站（投稿 + 动态）：抖音/快手 没有条目级数据，不参与这个列表，
+ * 它们的更新体现在卡片角标上。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UnconfirmedScreen(modifier: Modifier = Modifier) {
+fun LatestCheckScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val items = PendingStore.items
-
-    // 按人分组，保持发现顺序
     val grouped = items.groupBy { it.personId }
 
     Scaffold(
@@ -67,14 +63,7 @@ fun UnconfirmedScreen(modifier: Modifier = Modifier) {
         topBar = {
             TopAppBar(
                 windowInsets = WindowInsets(0, 0, 0, 0),
-                title = { Text("待确认") },
-                actions = {
-                    if (items.isNotEmpty()) {
-                        TextButton(onClick = { PendingStore.clearAll(context) }) {
-                            Text("全部清空", color = MaterialTheme.colorScheme.textMuted)
-                        }
-                    }
-                }
+                title = { Text("最近检查") }
             )
         }
     ) { innerPadding ->
@@ -82,11 +71,12 @@ fun UnconfirmedScreen(modifier: Modifier = Modifier) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(innerPadding)
+                    .padding(Spacing.pageHorizontal),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "没有待确认的新视频。\n回首页点「检查」拉一次看看。",
+                    text = "还没有检查结果。\n回首页点「检查」，或者等一次自动检查。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.textMuted
                 )
@@ -121,40 +111,34 @@ fun UnconfirmedScreen(modifier: Modifier = Modifier) {
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        TextButton(onClick = { PendingStore.removeByPerson(context, personId) }) {
-                            Text("本组全部确认")
-                        }
+                        Text(
+                            text = "${list.size} 条",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.textMuted
+                        )
                     }
                 }
 
-                items(items = list, key = { it.bvid }) { pending ->
-                    PendingRow(
-                        pending = pending,
-                        onOpen = { openContent(context, pending) },
-                        onConfirm = { PendingStore.remove(context, pending.bvid) }
-                    )
+                items(items = list, key = { it.bvid }) { item ->
+                    ResultRow(item = item, onClick = { openContent(context, item) })
                 }
             }
         }
     }
 }
 
-/** 一行待确认：封面 + 标题，点行去看，点勾确认掉。 */
+/** 一行结果：封面 + 标题 + 时间，点整行去 App 看。 */
 @Composable
-private fun PendingRow(
-    pending: PendingItem,
-    onOpen: () -> Unit,
-    onConfirm: () -> Unit
-) {
+private fun ResultRow(item: PendingItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onOpen)
+            .clickable(onClick = onClick)
             .padding(vertical = Spacing.tinyGap),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RemoteImage(
-            url = pending.coverUrl,
+            url = item.coverUrl,
             modifier = Modifier
                 .width(Spacing.coverWidth)
                 .aspectRatio(16f / 9f)
@@ -174,7 +158,7 @@ private fun PendingRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = pending.title,
+                text = item.title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
@@ -182,35 +166,26 @@ private fun PendingRow(
             )
             Spacer(Modifier.height(Spacing.tinyGap))
             Text(
-                text = "发现于 ${relativeTime(pending.foundAt)}",
+                text = if (item.kind == "DYNAMIC") "动态" else "投稿",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.textMuted
-            )
-        }
-
-        IconButton(onClick = onConfirm) {
-            Icon(
-                imageVector = Icons.Filled.Check,
-                contentDescription = "标记已确认",
-                tint = MaterialTheme.colorScheme.primary
             )
         }
     }
 }
 
-/** 打开某个视频：优先 B 站 App，失败降级网页。 */
-private fun openContent(context: Context, pending: PendingItem) {
-    // 动态走 t.bilibili.com（B 站 App 接管），投稿走 bilibili:// 视频深链
-    val isDynamic = pending.kind == "DYNAMIC"
+/** 打开内容：投稿走视频深链，动态走 t.bilibili.com。 */
+private fun openContent(context: Context, item: PendingItem) {
+    val isDynamic = item.kind == "DYNAMIC"
     val primary = if (isDynamic) {
-        "https://t.bilibili.com/${pending.bvid}"
+        "https://t.bilibili.com/${item.bvid}"
     } else {
-        "bilibili://video/${pending.bvid}"
+        "bilibili://video/${item.bvid}"
     }
     val fallback = if (isDynamic) {
-        "https://t.bilibili.com/${pending.bvid}"
+        "https://t.bilibili.com/${item.bvid}"
     } else {
-        "https://www.bilibili.com/video/${pending.bvid}"
+        "https://www.bilibili.com/video/${item.bvid}"
     }
 
     val opened = runCatching {

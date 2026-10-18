@@ -43,6 +43,15 @@ object BiliSource {
     private const val TIMEOUT_MS = 15_000
     private const val PREF = "bili_session"
 
+    /** 被 B站 拒绝访问时的统一提示。
+     *
+     * 实测：未登录访问 B站 很容易被拦（412 / -352）。
+     * 这是 B站 自己的运维要求，不是本应用的问题，所以直接告诉用户去登录。
+     */
+    private const val LIMIT_HINT =
+        "B站 还没让你访问：它的运维硬性要求是登录后才稳定。" +
+            "请到「设置 → 账号与登录」登录 B站 账号。" +
+            "部分安全 IP 可能无需登录也能访问；如果你第一次访问就被限制，那就是需要登录了。"
     /** 命中风控后的冷却时长：既保护身份，也避免用户连点。 */
     private const val COOLDOWN_MS = 5 * 60_000L
 
@@ -107,7 +116,7 @@ object BiliSource {
             val code = root.optInt("code", -1)
             if (code == -352 || code == -412) {
                 startCooldown()
-                throw IllegalStateException("B站 限制了访问频率（$code），已自动冷却 5 分钟，稍后再试")
+                throw IllegalStateException(LIMIT_HINT)
             }
             if (code != 0) {
                 throw IllegalStateException("B站返回 code=$code：${root.optString("message").ifEmpty { "接口拒绝" }}")
@@ -142,7 +151,8 @@ object BiliSource {
         val text = input.trim()
         if (text.isEmpty()) return null
         if (text.all { it.isDigit() }) return text.toLongOrNull()
-        Regex("""space\.bilibili\.com/(\d+)""").find(text)?.let {
+        Regex("""(?:space\.bilibili\.com|bilibili\.com/space|m\.bilibili\.com/space)/(\d+)""")
+            .find(text)?.let {
             return it.groupValues[1].toLongOrNull()
         }
         Regex("""(?:^|[^\d])(\d{4,12})(?:[^\d]|$)""").find(text)?.let {
@@ -270,7 +280,7 @@ object BiliSource {
             val code = root.optInt("code", -1)
             if (code == -352 || code == -412) {
                 startCooldown()
-                throw IllegalStateException("B站 限制了访问频率（$code），已冷却 5 分钟")
+                throw IllegalStateException(LIMIT_HINT)
             }
             if (code != 0) {
                 throw IllegalStateException("B站动态 code=$code：${root.optString("message").ifEmpty { "接口拒绝" }}")

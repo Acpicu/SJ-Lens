@@ -174,8 +174,8 @@ fun SettingsScreen(
                     }
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
-                        title = "待确认",
-                        summary = "当前 $pendingCount 条未处理的新内容",
+                        title = "最近检查结果",
+                        summary = "上一轮检查发现 $pendingCount 条，点清空可手动清除",
                         action = if (pendingCount > 0) "清空" else null,
                         onAction = { confirmClearPending = true }
                     )
@@ -274,8 +274,8 @@ fun SettingsScreen(
     if (confirmClearPending) {
         AlertDialog(
             onDismissRequest = { confirmClearPending = false },
-            title = { Text("清空待确认？") },
-            text = { Text("会删除 $pendingCount 条待确认记录，抓取快照保留。") },
+            title = { Text("清空最近检查结果？") },
+            text = { Text("会清空 $pendingCount 条显示记录，不影响抓取快照和文件夹。") },
             confirmButton = {
                 TextButton(onClick = {
                     PendingStore.clearAll(context)

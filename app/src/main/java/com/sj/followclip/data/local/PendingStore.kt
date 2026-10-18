@@ -19,10 +19,12 @@ data class PendingItem(
 )
 
 /**
- * 待确认池：检查更新时发现的新视频先堆在这里，供「待确认」页展示。
+ * 最近一轮检查的结果。
  *
- * 用 SnapshotStateList 承载，界面读它会自动重组；
- * 每次增删都落盘，杀进程不丢。按 bvid 去重，重复检查不会堆积。
+ * **只保留最近一次检查发现的新内容**，每次检查整体覆盖，用户不需要手动清理。
+ * 这样「待确认」页永远只反映当前状态，不会堆成陈年旧货。
+ *
+ * 用 SnapshotStateList 承载，界面读它会自动重组；每次写入都落盘，杀进程不丢。
  */
 object PendingStore {
 
@@ -39,29 +41,14 @@ object PendingStore {
         items.addAll(load(context))
     }
 
-    /** 批量加入新视频；已存在的 bvid 跳过。 */
-    fun addAll(context: Context, incoming: List<PendingItem>) {
-        if (incoming.isEmpty()) return
-        val existing = items.map { it.bvid }.toMutableSet()
-        var changed = false
+    /** 用本轮结果整体替换；同一轮内按 id 去重。 */
+    fun replaceAll(context: Context, incoming: List<PendingItem>) {
+        items.clear()
+        val seen = mutableSetOf<String>()
         incoming.forEach { item ->
-            if (existing.add(item.bvid)) {
-                items.add(item)
-                changed = true
-            }
+            if (seen.add(item.bvid)) items.add(item)
         }
-        if (changed) persist(context)
-    }
-
-    fun remove(context: Context, bvid: String) {
-        val removed = items.removeAll { it.bvid == bvid }
-        if (removed) persist(context)
-    }
-
-    /** 整组确认：把某个人的待确认清空。 */
-    fun removeByPerson(context: Context, personId: Long) {
-        val removed = items.removeAll { it.personId == personId }
-        if (removed) persist(context)
+        persist(context)
     }
 
     fun clearAll(context: Context) {

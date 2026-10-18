@@ -43,6 +43,8 @@ object BiliChecker {
         if (jobs.isEmpty()) return Result.success(emptyList())
 
         val results = mutableListOf<AccountCheckResult>()
+        // 本轮发现的新内容先攒着，最后整体替换待确认池（只保留最近一轮）
+        val roundItems = mutableListOf<PendingItem>()
         var done = 0
 
         for ((personId, personName, account) in jobs) {
@@ -67,20 +69,17 @@ object BiliChecker {
                 }
                 VideoSnapshotStore.save(context, account.id, list.map { it.bvid }.take(60))
                 if (freshVideos.isNotEmpty()) {
-                    PendingStore.addAll(
-                        context,
-                        freshVideos.map { v ->
-                            PendingItem(
-                                bvid = v.bvid,
-                                title = v.title,
-                                personId = personId,
-                                personName = personName,
-                                platform = account.platform.name,
-                                coverUrl = v.coverUrl,
-                                foundAt = System.currentTimeMillis()
-                            )
-                        }
-                    )
+                    roundItems += freshVideos.map { v ->
+                        PendingItem(
+                            bvid = v.bvid,
+                            title = v.title,
+                            personId = personId,
+                            personName = personName,
+                            platform = account.platform.name,
+                            coverUrl = v.coverUrl,
+                            foundAt = System.currentTimeMillis()
+                        )
+                    }
                 }
                 results += AccountCheckResult(personId, account.id, freshVideos.size)
 
@@ -98,21 +97,18 @@ object BiliChecker {
                     VideoSnapshotStore.save(context, account.id, dyns.map { it.id }.take(60), "dyn")
 
                     if (freshDyn.isNotEmpty()) {
-                        PendingStore.addAll(
-                            context,
-                            freshDyn.map { d ->
-                                PendingItem(
-                                    bvid = d.id,
-                                    title = d.text.take(80),
-                                    personId = personId,
-                                    personName = personName,
-                                    platform = account.platform.name,
-                                    coverUrl = d.coverUrl,
-                                    kind = "DYNAMIC",
-                                    foundAt = System.currentTimeMillis()
-                                )
-                            }
-                        )
+                        roundItems += freshDyn.map { d ->
+                            PendingItem(
+                                bvid = d.id,
+                                title = d.text.take(80),
+                                personId = personId,
+                                personName = personName,
+                                platform = account.platform.name,
+                                coverUrl = d.coverUrl,
+                                kind = "DYNAMIC",
+                                foundAt = System.currentTimeMillis()
+                            )
+                        }
                         results += AccountCheckResult(personId, account.id, freshDyn.size)
                     }
                 }
@@ -121,6 +117,9 @@ object BiliChecker {
             done++
             onProgress(done, jobs.size)
         }
+
+        // 只保留最近一轮的结果：每次检查直接覆盖，用户不用手动清理
+        PendingStore.replaceAll(context, roundItems)
 
         return Result.success(results)
     }
