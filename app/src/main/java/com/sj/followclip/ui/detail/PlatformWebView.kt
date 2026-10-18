@@ -89,7 +89,8 @@ fun PlatformWebView(
     val context = LocalContext.current
     val platform = account?.platform
     val accountId = account?.id ?: 0L
-    val targetUrl = account?.homepageUrl?.trim().orEmpty()
+    // 存的可能是 App 深链（snssdk1128://...），WebView 打不开，这里尽量还原成网页
+    val targetUrl = com.sj.followclip.util.PlatformUrls.toWebUrl(account?.homepageUrl.orEmpty()).orEmpty()
     val referer = remember(platform) {
         when (platform?.name) {
             "DOUYIN" -> "https://www.douyin.com/"
@@ -244,7 +245,9 @@ fun PlatformWebView(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "这个账号还没填主页链接。\n回到文件夹里删掉后重新添加，填上主页链接即可。",
+                            text = "这个账号存的不是网页链接，网页打不开。\n\n" +
+                                "当前地址：${account?.homepageUrl.orEmpty()}\n\n" +
+                                "请删掉这个账号重新添加，粘贴 https://www.douyin.com/user/... 这样的网页链接。",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.textMuted,
                             modifier = Modifier.padding(Spacing.pageHorizontal)

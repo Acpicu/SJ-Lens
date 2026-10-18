@@ -146,7 +146,7 @@ fun AddAccountScreen(
                         normalized == null -> hint = if (platform == Platform.BILI) {
                             "请填 B站 UID（纯数字），或粘贴主页链接"
                         } else {
-                            "这不像一个主页链接，请粘贴形如 https://... 的地址"
+                            "这不像网页链接。抖音/快手 请用「分享 → 复制链接」后粘贴 https:// 开头的地址"
                         }
                         else -> {
                             hint = null
@@ -185,6 +185,12 @@ private fun normalizeUrl(raw: String, platform: Platform): String? {
         } else {
             null
         }
+    }
+
+    // 抖音/快手「分享」里复制出来的往往是 App 深链（snssdk1128://…），
+    // 直接存下来网页打不开。先尝试还原成网页地址。
+    if (!com.sj.followclip.util.PlatformUrls.isWebUrl(text)) {
+        com.sj.followclip.util.PlatformUrls.toWebUrl(text)?.let { return it }
     }
 
     // 分享文本里抽出第一条链接
