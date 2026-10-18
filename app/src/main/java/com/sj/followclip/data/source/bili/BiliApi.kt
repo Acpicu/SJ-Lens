@@ -350,7 +350,10 @@ object BiliSource {
         val left = until - System.currentTimeMillis()
         if (left > 0) {
             val minutes = (left / 60_000L) + 1
-            throw IllegalStateException("刚才被 B站 限流了，还要等 $minutes 分钟。这是为了保护不被封，别急")
+            throw IllegalStateException(
+                "还要等 $minutes 分钟（冷却中，避免被彻底拉黑）。\n" +
+                    "如果一直这样，去「设置 → 账号与登录」登录 B站 账号。"
+            )
         }
     }
 
@@ -425,7 +428,8 @@ object BiliSource {
 
             if (code == 412) {
                 startCooldown()
-                throw IllegalStateException("B站 风控拦截（412），已冷却 5 分钟，稍后再试")
+                // 412 是 B站 对未登录访问最常见的拦截方式，直接给出可执行的动作
+                throw IllegalStateException(LIMIT_HINT)
             }
             if (code !in 200..299) throw IllegalStateException("网络请求失败（HTTP $code）")
             return body
