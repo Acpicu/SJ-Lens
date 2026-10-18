@@ -140,8 +140,12 @@ fun HomeScreen(
 
     // è¿›åº”ç”¨è‡ªåŠ¨æŸ¥ä¸€è½®ï¼Œä¸‰ç±»éƒ½è¦†ç›–ã€‚
     // æŠ–éŸ³/å¿«æ‰‹çš„æŠ“å–ç”¨é€æ˜å…¨å± WebView å®Œæˆï¼Œä¸ä¼šå’Œç”¨æˆ·çœ‹åˆ°çš„ç•Œé¢å†²çªã€‚
+    // åªåœ¨ã€Œæœ¬æ¬¡å¯åŠ¨ã€ç¬¬ä¸€æ¬¡è¿›é¦–é¡µæ—¶è·‘ï¼šä»å…¶å®ƒé¡µé¢è¿”å›ä¸è¯¥å†æŸ¥ä¸€éã€‚
     LaunchedEffect(Unit) {
-        if (persons.isNotEmpty()) performCheck(includeWeb = true)
+        if (!AutoCheckGate.done && persons.isNotEmpty()) {
+            AutoCheckGate.done = true
+            performCheck(includeWeb = true)
+        }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -404,4 +408,10 @@ private fun HomeScreenEmptyPreview() {
             onMovePerson = { _, _ -> }
         )
     }
+}
+
+
+/** ½ø³Ì¼¶±ê¼Ç£º±¾´ÎÆô¶¯ÊÇ·ñÒÑ×Ô¶¯²é¹ıÒ»ÂÖ£¬±ÜÃâ´ÓÆäËüÒ³Ãæ·µ»ØÊ±·´¸´¼ì²é¡£ */
+private object AutoCheckGate {
+    var done = false
 }

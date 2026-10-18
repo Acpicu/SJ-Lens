@@ -48,6 +48,7 @@ import com.sj.followclip.ui.detail.BiliLoginScreen
 import com.sj.followclip.ui.detail.PlatformVideosScreen
 import com.sj.followclip.ui.detail.PlatformWebView
 import com.sj.followclip.ui.evidence.EvidenceScreen
+import com.sj.followclip.ui.evidence.ReportScreen
 import com.sj.followclip.ui.guide.GuideScreen
 import com.sj.followclip.ui.guide.UsageGuideDialog
 import com.sj.followclip.ui.guide.markUsageGuideShown
@@ -86,10 +87,13 @@ object Routes {
     const val ADD_ACCOUNT = "person/{$ARG_PERSON_ID}/addAccount"
     const val PLATFORM_VIDEOS = "person/{$ARG_PERSON_ID}/account/{$ARG_ACCOUNT_ID}"
     const val PERSON_EVIDENCE = "person/{$ARG_PERSON_ID}/evidence"
+    const val PERSON_REPORT = "person/{$ARG_PERSON_ID}/report"
 
     fun person(personId: Long): String = "person/$personId"
 
     fun evidence(personId: Long): String = "person/$personId/evidence"
+
+    fun report(personId: Long): String = "person/$personId/report"
 
     fun addAccount(personId: Long): String = "person/$personId/addAccount"
 
@@ -297,6 +301,21 @@ fun AppNavigation() {
             ) { entry ->
                 val personId = entry.arguments?.getLong(Routes.ARG_PERSON_ID) ?: 0L
                 EvidenceScreen(
+                    personId = personId,
+                    personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
+                    onBack = { navController.popBackStackSafely() },
+                    onPreview = { navController.navigate(Routes.report(personId)) }
+                )
+            }
+
+            composable(
+                route = Routes.PERSON_REPORT,
+                arguments = listOf(
+                    navArgument(Routes.ARG_PERSON_ID) { type = NavType.LongType }
+                )
+            ) { entry ->
+                val personId = entry.arguments?.getLong(Routes.ARG_PERSON_ID) ?: 0L
+                ReportScreen(
                     personId = personId,
                     personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
                     onBack = { navController.popBackStackSafely() }

@@ -63,6 +63,7 @@ fun EvidenceScreen(
     personId: Long,
     personName: String,
     onBack: () -> Unit,
+    onPreview: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -138,6 +139,10 @@ fun EvidenceScreen(
                     )
                 },
                 actions = {
+                    TextButton(
+                        enabled = entries.isNotEmpty() || todos.isNotEmpty(),
+                        onClick = onPreview
+                    ) { Text("预览") }
                     TextButton(
                         enabled = entries.isNotEmpty() || todos.isNotEmpty(),
                         onClick = {
