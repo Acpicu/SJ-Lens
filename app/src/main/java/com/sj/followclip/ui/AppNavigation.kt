@@ -49,7 +49,6 @@ import com.sj.followclip.ui.detail.PlatformVideosScreen
 import com.sj.followclip.ui.detail.PlatformWebView
 import com.sj.followclip.ui.home.HomeScreen
 import com.sj.followclip.ui.preview.FakeData
-import com.sj.followclip.ui.settings.PlatformLoginScreen
 import com.sj.followclip.ui.settings.SettingsScreen
 import com.sj.followclip.ui.state.AppUiState
 import com.sj.followclip.ui.unconfirmed.LatestCheckScreen
@@ -67,7 +66,6 @@ object Routes {
     const val UNCONFIRMED = "unconfirmed"
     const val SETTINGS = "settings"
     const val CREATE_FOLDER = "createFolder"
-    const val PLATFORM_LOGIN = "platform_login/{platform}"
     const val BILI_LOGIN = "biliLogin"
 
     const val ARG_PERSON_ID = "personId"
@@ -210,7 +208,6 @@ fun AppNavigation() {
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     onLoginBili = { navController.navigate(Routes.BILI_LOGIN) },
-                    onLoginPlatform = { p -> navController.navigate("platform_login/$p") }
                 )
             }
 
@@ -298,28 +295,6 @@ fun AppNavigation() {
                         onBack = { navController.popBackStack() }
                     )
                 }
-            }
-
-            composable(
-                route = Routes.PLATFORM_LOGIN,
-                arguments = listOf(navArgument("platform") { type = NavType.StringType })
-            ) { entry ->
-                val name = entry.arguments?.getString("platform").orEmpty()
-                val loginUrl = when (name) {
-                    "DOUYIN" -> "https://www.douyin.com/"
-                    "KUAISHOU" -> "https://www.kuaishou.com/"
-                    else -> "https://www.bilibili.com/"
-                }
-                val label = when (name) {
-                    "DOUYIN" -> "抖音"
-                    "KUAISHOU" -> "快手"
-                    else -> name
-                }
-                PlatformLoginScreen(
-                    platformName = label,
-                    loginUrl = loginUrl,
-                    onBack = { navController.popBackStack() }
-                )
             }
 
             composable(Routes.BILI_LOGIN) {

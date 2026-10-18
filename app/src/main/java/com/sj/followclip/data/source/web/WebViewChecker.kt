@@ -50,13 +50,21 @@ object WebViewChecker {
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
             settings.userAgentString = (settings.userAgentString ?: "")
                 .replace("; wv", "")
                 .replace(" Version/4.0", "")
+            // 透明但按真实尺寸渲染：视口太小站点会渲染成空壳，什么都抓不到
+            alpha = 0f
         }
 
-        // 塞进当前窗口但只占 1×1 且不可见：不挂窗口 WebView 不会执行 JS
-        val params = ViewGroup.LayoutParams(1, 1)
+        // 必须铺满窗口（真实视口）才会渲染出内容；
+        // 之前用 1×1 是错的 —— 页面直接返回空壳，所以永远抓不到。
+        val params = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
         runCatching { activity.addContentView(webView, params) }
 
         val results = mutableListOf<AccountCheckResult>()

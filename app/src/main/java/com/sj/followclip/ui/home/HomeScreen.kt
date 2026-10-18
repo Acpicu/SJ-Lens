@@ -120,10 +120,10 @@ fun HomeScreen(
         }
     }
 
-    // 进应用只自动查 B站：抖音/快手 要真实渲染网页，启动时创建 WebView
-    // 会和用户随后打开的账号页抢同一个站点，导致那边抓不到内容。
+    // 进应用自动查一轮，三类都覆盖。
+    // 抖音/快手的抓取用透明全屏 WebView 完成，不会和用户看到的界面冲突。
     LaunchedEffect(Unit) {
-        if (persons.isNotEmpty()) performCheck(includeWeb = false)
+        if (persons.isNotEmpty()) performCheck(includeWeb = true)
     }
 
     Column(modifier = modifier.fillMaxSize()) {

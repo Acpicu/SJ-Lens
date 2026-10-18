@@ -54,7 +54,6 @@ import com.sj.followclip.util.WebCookies
 @Composable
 fun SettingsScreen(
     onLoginBili: () -> Unit,
-    onLoginPlatform: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -134,16 +133,7 @@ fun SettingsScreen(
                             tick++
                         }
                     )
-                    Spacer(Modifier.height(Spacing.gridGap))
-                    LoginRow(
-                        name = "抖音",
-                        loggedIn = douyinLogged,
-                        hint = "登录后能读取更完整的内容；建议用小号",
-                        onLogin = { onLoginPlatform("DOUYIN") },
-                        onClear = {
-                            WebCookies.clearAll { tick++ }
-                        }
-                    )
+
                 }
             }
 
@@ -429,6 +419,6 @@ private fun ActionRow(
 @Composable
 private fun SettingsScreenPreview() {
     SJFollowClipTheme {
-        SettingsScreen(onLoginBili = {}, onLoginPlatform = {})
+        SettingsScreen(onLoginBili = {})
     }
 }
