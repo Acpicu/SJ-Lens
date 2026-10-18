@@ -105,6 +105,7 @@ fun PlatformWebView(
     var lastSeenCount by remember(accountId) { mutableIntStateOf(0) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var debug by remember(accountId) { mutableStateOf("") }
+    var showBrowser by remember(accountId) { mutableStateOf(false) }
 
     BackHandler { onBack() }
 
@@ -126,6 +127,11 @@ fun PlatformWebView(
                     }
                 },
                 actions = {
+                    // 看网页：把隐藏的数据源 WebView 换成可见的，用来判断
+                    // 「页面根本没渲染」还是「渲染了但没解析出来」
+                    IconButton(onClick = { showBrowser = true }) {
+                        Text("🌐", style = MaterialTheme.typography.titleMedium)
+                    }
                     IconButton(onClick = {
                         loading = true
                         webView?.reload()
@@ -368,8 +374,65 @@ fun PlatformWebView(
             }
         }
     }
+
+    if (showBrowser && targetUrl.isNotBlank()) {
+        WebBrowserDialog(url = targetUrl, onClose = { showBrowser = false })
+    }
 }
 
+/**
+ * 网页查看器：把同一地址用可见的 WebView 打开。
+ *
+ * 存在的意义是**自证**：抓不到时能一眼看出是页面没渲染、
+ * 还是被平台的「请下载 App」引导页挡住、还是需要登录。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@android.annotation.SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun WebBrowserDialog(
+    url: String,
+    onClose: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onClose,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                TopAppBar(
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                    title = { Text("网页查看", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        IconButton(onClick = onClose) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "关闭")
+                        }
+                    }
+                )
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { ctx ->
+                        WebView(ctx).apply {
+                            CookieManager.getInstance().setAcceptCookie(true)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.useWideViewPort = true
+                            settings.loadWithOverviewMode = true
+                            settings.userAgentString = (settings.userAgentString ?: "")
+                                .replace("; wv", "")
+                                .replace(" Version/4.0", "")
+                            webViewClient = WebViewClient()
+                            loadUrl(url)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
 /** 单张作品卡：封面 + 标题，模仿平台主页的网格观感。 */
 @Composable
 private fun WebItemCell(
