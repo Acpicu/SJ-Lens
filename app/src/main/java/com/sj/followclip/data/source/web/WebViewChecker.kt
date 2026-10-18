@@ -113,6 +113,20 @@ object WebViewChecker {
         val loaded = CompletableDeferred<Unit>()
 
         webView.webViewClient = object : WebViewClient() {
+            // 平台页面会主动跳 App 深链，跟着跳就啥也抓不到（页面变错误页）
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: android.webkit.WebResourceRequest?
+            ): Boolean {
+                val u = request?.url?.toString().orEmpty()
+                return !(u.startsWith("http://") || u.startsWith("https://"))
+            }
+
+            @Suppress("DEPRECATION")
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                val u = url.orEmpty()
+                return !(u.startsWith("http://") || u.startsWith("https://"))
+            }
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!loaded.isCompleted) loaded.complete(Unit)
             }

@@ -173,7 +173,21 @@ fun PlatformWebView(
                             // 不再注册 onPageFinished 抓取：这类 SPA 常常不回调它，
                             // 而且和下面的定时器抽取会互相覆盖数据（曾经两套逻辑打架，
                             // 表现为「抓不到 / 数据乱跳」）。统一只走定时器。
-                            webViewClient = WebViewClient()
+                            // 抖音/快手 网页加载后会主动跳 App 深链，
+                            // WebView 跟着跳就是 ERR_UNKNOWN_URL_SCHEME，页面直接被错误页顶掉。
+                            // 这里只放行 http(s)，其它协议一律忽略。
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    request: android.webkit.WebResourceRequest?
+                                ): Boolean = !isHttpUrl(request?.url?.toString())
+
+                                @Suppress("DEPRECATION")
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    url: String?
+                                ): Boolean = !isHttpUrl(url)
+                            }
                             loadUrl(targetUrl)
                             webView = this
 
@@ -427,7 +441,21 @@ private fun WebBrowserDialog(
                             settings.userAgentString = (settings.userAgentString ?: "")
                                 .replace("; wv", "")
                                 .replace(" Version/4.0", "")
-                            webViewClient = WebViewClient()
+                            // 抖音/快手 网页加载后会主动跳 App 深链，
+                            // WebView 跟着跳就是 ERR_UNKNOWN_URL_SCHEME，页面直接被错误页顶掉。
+                            // 这里只放行 http(s)，其它协议一律忽略。
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    request: android.webkit.WebResourceRequest?
+                                ): Boolean = !isHttpUrl(request?.url?.toString())
+
+                                @Suppress("DEPRECATION")
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    url: String?
+                                ): Boolean = !isHttpUrl(url)
+                            }
                             loadUrl(url)
                         }
                     }
@@ -436,6 +464,12 @@ private fun WebBrowserDialog(
         }
     }
 }
+/** 只允许 http/https，其它协议（含各平台 App 深链）一律不加载。 */
+private fun isHttpUrl(url: String?): Boolean {
+    val u = url.orEmpty()
+    return u.startsWith("http://") || u.startsWith("https://")
+}
+
 /** 单张作品卡：封面 + 标题，模仿平台主页的网格观感。 */
 @Composable
 private fun WebItemCell(
