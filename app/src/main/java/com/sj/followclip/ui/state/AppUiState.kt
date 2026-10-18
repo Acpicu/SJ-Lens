@@ -100,13 +100,21 @@ object AppUiState {
         return loaded.size
     }
 
-    /** 清空全部本地数据：文件夹、账号、待确认、抓取快照。 */
+    /** 清空全部本地数据：文件夹、账号、待确认、抓取快照、笔记、证据与待验证清单。 */
     fun clearAllData(context: Context) {
         persons.clear()
         persist()
         PendingStore.clearAll(context)
         context.getSharedPreferences("video_snapshots", Context.MODE_PRIVATE)
             .edit().clear().apply()
+        // 笔记与证据是敏感内容，跟主数据一起清，避免用户以为清干净了其实没清
+        context.getSharedPreferences("sj_notes", Context.MODE_PRIVATE)
+            .edit().clear().apply()
+        context.getSharedPreferences("sj_evidence", Context.MODE_PRIVATE)
+            .edit().clear().apply()
+        runCatching {
+            java.io.File(context.filesDir, "evidence").deleteRecursively()
+        }
     }
 
     /** 设置某个账号的「几天提醒一次」。days = 0 表示关掉。 */    fun setReminder(personId: Long, accountId: Long, days: Int) {

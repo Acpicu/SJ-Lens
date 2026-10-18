@@ -47,7 +47,14 @@ import com.sj.followclip.ui.detail.PersonDetailScreen
 import com.sj.followclip.ui.detail.BiliLoginScreen
 import com.sj.followclip.ui.detail.PlatformVideosScreen
 import com.sj.followclip.ui.detail.PlatformWebView
+import com.sj.followclip.ui.evidence.EvidenceScreen
+import com.sj.followclip.ui.guide.GuideScreen
+import com.sj.followclip.ui.guide.UsageGuideDialog
+import com.sj.followclip.ui.guide.markUsageGuideShown
+import com.sj.followclip.ui.guide.shouldShowUsageGuide
 import com.sj.followclip.ui.home.HomeScreen
+import com.sj.followclip.ui.manual.FieldManualScreen
+import com.sj.followclip.ui.osint.ExposureAuditScreen
 import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.settings.SettingsScreen
 import com.sj.followclip.ui.state.AppUiState
@@ -67,6 +74,9 @@ object Routes {
     const val SETTINGS = "settings"
     const val CREATE_FOLDER = "createFolder"
     const val BILI_LOGIN = "biliLogin"
+    const val EXPOSURE_AUDIT = "exposureAudit"
+    const val FIELD_MANUAL = "fieldManual"
+    const val GUIDE = "guide"
 
     const val ARG_PERSON_ID = "personId"
     const val ARG_PLATFORM = "platform"
@@ -75,8 +85,11 @@ object Routes {
     const val PERSON = "person/{$ARG_PERSON_ID}"
     const val ADD_ACCOUNT = "person/{$ARG_PERSON_ID}/addAccount"
     const val PLATFORM_VIDEOS = "person/{$ARG_PERSON_ID}/account/{$ARG_ACCOUNT_ID}"
+    const val PERSON_EVIDENCE = "person/{$ARG_PERSON_ID}/evidence"
 
     fun person(personId: Long): String = "person/$personId"
+
+    fun evidence(personId: Long): String = "person/$personId/evidence"
 
     fun addAccount(personId: Long): String = "person/$personId/addAccount"
 
@@ -117,6 +130,22 @@ fun AppNavigation() {
     var showBatteryGuide by remember { mutableStateOf(shouldShowBatteryGuide(context)) }
     if (showBatteryGuide) {
         BatteryGuideDialog(onDismiss = { showBatteryGuide = false })
+    }
+
+    // 首次启动弹一次「怎么用」（只弹一次；设置里随时能重开）
+    var showUsageGuide by remember { mutableStateOf(shouldShowUsageGuide(context)) }
+    if (showUsageGuide) {
+        UsageGuideDialog(
+            onDismiss = {
+                markUsageGuideShown(context)
+                showUsageGuide = false
+            },
+            onOpenGuide = {
+                markUsageGuideShown(context)
+                showUsageGuide = false
+                navController.navigate(Routes.GUIDE)
+            }
+        )
     }
 
     // 自动检查排期：进应用排一次即可，KEEP 策略不会重置已有计时
@@ -208,7 +237,22 @@ fun AppNavigation() {
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     onLoginBili = { navController.navigate(Routes.BILI_LOGIN) },
+                    onOpenAudit = { navController.navigate(Routes.EXPOSURE_AUDIT) },
+                    onOpenManual = { navController.navigate(Routes.FIELD_MANUAL) },
+                    onOpenGuide = { navController.navigate(Routes.GUIDE) },
                 )
+            }
+
+            composable(Routes.GUIDE) {
+                GuideScreen(onBack = { navController.popBackStackSafely() })
+            }
+
+            composable(Routes.FIELD_MANUAL) {
+                FieldManualScreen(onBack = { navController.popBackStackSafely() })
+            }
+
+            composable(Routes.EXPOSURE_AUDIT) {
+                ExposureAuditScreen(onBack = { navController.popBackStackSafely() })
             }
 
             composable(Routes.CREATE_FOLDER) {
@@ -240,7 +284,22 @@ fun AppNavigation() {
                     },
                     onDeleteAccount = { accountId ->
                         AppUiState.removeAccount(personId, accountId)
-                    }
+                    },
+                    onOpenEvidence = { id -> navController.navigate(Routes.evidence(id)) }
+                )
+            }
+
+            composable(
+                route = Routes.PERSON_EVIDENCE,
+                arguments = listOf(
+                    navArgument(Routes.ARG_PERSON_ID) { type = NavType.LongType }
+                )
+            ) { entry ->
+                val personId = entry.arguments?.getLong(Routes.ARG_PERSON_ID) ?: 0L
+                EvidenceScreen(
+                    personId = personId,
+                    personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
+                    onBack = { navController.popBackStackSafely() }
                 )
             }
 

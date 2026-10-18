@@ -54,6 +54,9 @@ import com.sj.followclip.util.WebCookies
 @Composable
 fun SettingsScreen(
     onLoginBili: () -> Unit,
+    onOpenAudit: () -> Unit,
+    onOpenManual: () -> Unit,
+    onOpenGuide: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -176,6 +179,33 @@ fun SettingsScreen(
                         action = "清除",
                         danger = true,
                         onAction = { confirmClearAll = true }
+                    )
+                }
+            }
+
+            item {
+                SectionTitle("OSINT")
+
+                SettingCard {
+                    ActionRow(
+                        title = "怎么用",
+                        summary = "9 步操作路径，按顺序做一遍就会；每步都写清点哪里",
+                        action = "打开",
+                        onAction = onOpenGuide
+                    )
+                    Spacer(Modifier.height(Spacing.gridGap))
+                    ActionRow(
+                        title = "自身曝光审计",
+                        summary = "填自己在各平台的公开资料，算出别人把这些号串成同一个人的难度",
+                        action = "打开",
+                        onAction = onOpenAudit
+                    )
+                    Spacer(Modifier.height(Spacing.gridGap))
+                    ActionRow(
+                        title = "现场手册",
+                        summary = "证据链、信源分级、交叉验证、常见误判、操作安全与边界，离线内置",
+                        action = "查看",
+                        onAction = onOpenManual
                     )
                 }
             }
@@ -419,6 +449,6 @@ private fun ActionRow(
 @Composable
 private fun SettingsScreenPreview() {
     SJFollowClipTheme {
-        SettingsScreen(onLoginBili = {})
+        SettingsScreen(onLoginBili = {}, onOpenAudit = {}, onOpenManual = {}, onOpenGuide = {})
     }
 }

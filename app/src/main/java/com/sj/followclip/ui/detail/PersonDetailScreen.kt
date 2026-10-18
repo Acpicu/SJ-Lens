@@ -3,6 +3,7 @@ package com.sj.followclip.ui.detail
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +51,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.sj.followclip.data.local.NoteStore
 import com.sj.followclip.domain.model.Account
 import com.sj.followclip.domain.model.Person
 import com.sj.followclip.domain.model.totalUnread
@@ -75,6 +80,7 @@ fun PersonDetailScreen(
     onBack: () -> Unit,
     onAccountClick: (Account) -> Unit,
     onDeleteAccount: (Long) -> Unit,
+    onOpenEvidence: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 账号列表直接取传入的数据，删除通过回调交给上层改状态，界面自动刷新
@@ -130,6 +136,46 @@ fun PersonDetailScreen(
         ) {
             item {
                 PersonHeader(person = person, accountCount = accounts.size)
+            }
+
+            item {
+                NoteCard(personId = person.id)
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenEvidence(person.id) },
+                    shape = RoundedCornerShape(Spacing.cardCorner),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(Spacing.cardPadding),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "证据条目",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(Spacing.tinyGap))
+                            Text(
+                                text = "E-001 起编号 · 记录来源与信源等级 · 可导出 Markdown",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.textMuted
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.textMuted
+                        )
+                    }
+                }
             }
 
             item {
@@ -353,6 +399,76 @@ private fun AccountCard(
     }
 }
 
+/**
+ * 笔记卡：每个文件夹一条自由文本，用于记观察结论和待验证线索。
+ *
+ * 只在点「保存」时落盘，避免边打字边写；清空需要二次确认在长按删除逻辑之外，这里直接清。
+ */
+@Composable
+private fun NoteCard(personId: Long) {
+    val context = LocalContext.current
+    var text by remember(personId) { mutableStateOf(NoteStore.load(context, personId)) }
+    var saved by remember(personId) { mutableStateOf(NoteStore.hasNotes(context, personId)) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Spacing.cardCorner),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(Spacing.cardPadding)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "笔记",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.textMuted
+                )
+                Spacer(Modifier.width(Spacing.itemGap))
+                Text(
+                    text = if (saved) "已保存" else "未保存",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (saved) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.textMuted
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.itemGap))
+
+            OutlinedTextField(
+                value = text,
+                onValueChange = {
+                    text = it
+                    saved = false
+                },
+                label = { Text("观察记录 / 待验证线索") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 96.dp)
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = {
+                        NoteStore.save(context, personId, text)
+                        saved = text.isNotBlank()
+                    }
+                ) { Text("保存") }
+
+                TextButton(
+                    enabled = text.isNotBlank() || saved,
+                    onClick = {
+                        NoteStore.clear(context, personId)
+                        text = ""
+                        saved = false
+                    }
+                ) { Text("清空", color = MaterialTheme.colorScheme.error) }
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true, name = "文件夹内部")
 @Composable
 private fun PersonDetailScreenPreview() {
@@ -361,7 +477,8 @@ private fun PersonDetailScreenPreview() {
             person = FakeData.persons[3],
             onBack = {},
             onAccountClick = {},
-            onDeleteAccount = {}
+            onDeleteAccount = {},
+            onOpenEvidence = {}
         )
     }
 }

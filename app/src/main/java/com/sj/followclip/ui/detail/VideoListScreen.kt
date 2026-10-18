@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,12 +56,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.sj.followclip.data.local.PendingItem
 import com.sj.followclip.data.local.PendingStore
 import com.sj.followclip.data.local.VideoSnapshotStore
+import com.sj.followclip.data.osint.PostSample
+import com.sj.followclip.data.osint.PublicContentStats
 import com.sj.followclip.data.source.bili.BiliDynamic
 import com.sj.followclip.data.source.bili.BiliSource
 import com.sj.followclip.data.source.bili.BiliVideo
 import com.sj.followclip.domain.model.Account
 import com.sj.followclip.domain.model.Platform
 import com.sj.followclip.ui.common.RemoteImage
+import com.sj.followclip.ui.osint.ContentStatsPanel
 import com.sj.followclip.ui.state.AppUiState
 import com.sj.followclip.ui.theme.Spacing
 import com.sj.followclip.ui.theme.textMuted
@@ -318,6 +322,18 @@ fun PlatformVideosScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.gridGap)
                 ) {
+                    // 已抓到的条目当场算一次节奏画像，不额外请求
+                    item(key = "contentStats") {
+                        ContentStatsPanel(
+                            posts = videos.map {
+                                PostSample(
+                                    publishedAt = it.publishedAt,
+                                    title = it.title,
+                                    durationMs = it.durationMs
+                                )
+                            }
+                        )
+                    }
                     items(items = videos, key = { it.bvid }) { video ->
                         VideoRow(
                             video = video,
@@ -466,6 +482,14 @@ private fun DynamicsSection(
             ),
             verticalArrangement = Arrangement.spacedBy(Spacing.gridGap)
         ) {
+            // 动态也走同一套统计引擎：时间戳为 0 的条目会在引擎里被丢掉
+            item(key = "dynStats") {
+                ContentStatsPanel(
+                    posts = dynamics.map {
+                        PostSample(publishedAt = it.publishedAt, title = it.text)
+                    }
+                )
+            }
             items(items = dynamics, key = { it.id }) { dynamic ->
                 DynamicRow(dynamic = dynamic, onClick = { onOpen(dynamic) })
             }
