@@ -57,6 +57,7 @@ fun SettingsScreen(
     onOpenAudit: () -> Unit,
     onOpenManual: () -> Unit,
     onOpenGuide: () -> Unit,
+    onOpenRecord: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -192,6 +193,13 @@ fun SettingsScreen(
                         summary = "9 步操作路径，按顺序做一遍就会；每步都写清点哪里",
                         action = "打开",
                         onAction = onOpenGuide
+                    )
+                    Spacer(Modifier.height(Spacing.gridGap))
+                    ActionRow(
+                        title = "记录了什么",
+                        summary = "一条新作品记下哪些字段、能推出什么、数据存在哪、怎么删",
+                        action = "查看",
+                        onAction = onOpenRecord
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
@@ -449,6 +457,12 @@ private fun ActionRow(
 @Composable
 private fun SettingsScreenPreview() {
     SJFollowClipTheme {
-        SettingsScreen(onLoginBili = {}, onOpenAudit = {}, onOpenManual = {}, onOpenGuide = {})
+        SettingsScreen(
+            onLoginBili = {},
+            onOpenAudit = {},
+            onOpenManual = {},
+            onOpenGuide = {},
+            onOpenRecord = {}
+        )
     }
 }

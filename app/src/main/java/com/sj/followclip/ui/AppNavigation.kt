@@ -56,6 +56,7 @@ import com.sj.followclip.ui.guide.shouldShowUsageGuide
 import com.sj.followclip.ui.home.HomeScreen
 import com.sj.followclip.ui.manual.FieldManualScreen
 import com.sj.followclip.ui.osint.ExposureAuditScreen
+import com.sj.followclip.ui.record.DataRecordScreen
 import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.settings.SettingsScreen
 import com.sj.followclip.ui.state.AppUiState
@@ -78,6 +79,7 @@ object Routes {
     const val EXPOSURE_AUDIT = "exposureAudit"
     const val FIELD_MANUAL = "fieldManual"
     const val GUIDE = "guide"
+    const val RECORD = "record"
 
     const val ARG_PERSON_ID = "personId"
     const val ARG_PLATFORM = "platform"
@@ -244,7 +246,12 @@ fun AppNavigation() {
                     onOpenAudit = { navController.navigate(Routes.EXPOSURE_AUDIT) },
                     onOpenManual = { navController.navigate(Routes.FIELD_MANUAL) },
                     onOpenGuide = { navController.navigate(Routes.GUIDE) },
+                    onOpenRecord = { navController.navigate(Routes.RECORD) },
                 )
+            }
+
+            composable(Routes.RECORD) {
+                DataRecordScreen(onBack = { navController.popBackStackSafely() })
             }
 
             composable(Routes.GUIDE) {
