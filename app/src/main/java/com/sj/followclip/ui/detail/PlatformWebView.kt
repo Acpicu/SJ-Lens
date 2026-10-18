@@ -259,8 +259,7 @@ fun PlatformWebView(
                             workCount > 0 -> "主页数据 $workCount 条 · 已载入 ${items.size} 张预览"
                             items.isNotEmpty() -> "已载入 ${items.size} 张封面"
                             loading -> "正在读取主页所有作品数量…"
-                            debug.isNotEmpty() -> debug
-                            else -> "点右上角刷新"
+                            else -> "$debug · 点右上角刷新"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = if (newCount > 0) {
