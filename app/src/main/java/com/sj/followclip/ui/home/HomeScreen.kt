@@ -120,10 +120,10 @@ fun HomeScreen(
         }
     }
 
-    // 进应用自动查一轮，包含抖音/快手。
-    // 只查 B站 的话，这两类文件夹的「上次抓取」永远停在旧时间，看着像没检查。
+    // 进应用只自动查 B站：抖音/快手 要真实渲染网页，启动时创建 WebView
+    // 会和用户随后打开的账号页抢同一个站点，导致那边抓不到内容。
     LaunchedEffect(Unit) {
-        if (persons.isNotEmpty()) performCheck(includeWeb = true)
+        if (persons.isNotEmpty()) performCheck(includeWeb = false)
     }
 
     Column(modifier = modifier.fillMaxSize()) {

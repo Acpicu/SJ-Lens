@@ -159,49 +159,10 @@ fun PlatformWebView(
                                 .replace("; wv", "")
                                 .replace(" Version/4.0", "")
 
-                            webViewClient = object : WebViewClient() {
-                                override fun onPageFinished(view: WebView?, url: String?) {
-                                    val wv = view ?: return
-                                    // 页面异步渲染，多试几轮再抠
-                                    wv.postDelayed({ loading = false }, 9500L)
-                                listOf(1500L, 3500L, 6000L, 9000L).forEach { delayMs ->
-                                        wv.postDelayed({
-                                            wv.evaluateJavascript(EXTRACT_JS) { raw ->
-                                                android.util.Log.d("SJExtract", "raw=" + (raw ?: "null").take(160))
-                                                val parsed = parseItems(raw)
-                                                debug = parsed.debug
-                                                val parsedItems = parsed.items
-                                                if (parsedItems.isNotEmpty()) {
-                                                    items = parsedItems
-                                                    loading = false
-                                                    if (accountId > 0L) {
-                                                        val known = VideoSnapshotStore.load(
-                                                            ctx, accountId, "dy"
-                                                        )
-                                                        val fresh = if (known.isEmpty()) {
-                                                            emptySet<String>()
-                                                        } else {
-                                                            parsedItems.map { it.id }
-                                                                .filter { it !in known }
-                                                                .toSet()
-                                                        }
-                                                        newCount = fresh.size
-                                                        VideoSnapshotStore.save(
-                                                            ctx, accountId,
-                                                            parsedItems.map { it.id }.take(60), "dy"
-                                                        )
-                                                        if (personId > 0L) {
-                                                            AppUiState.setUnread(
-                                                                personId, accountId, fresh.size
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }, delayMs)
-                                    }
-                                }
-                            }
+                            // 不再注册 onPageFinished 抓取：这类 SPA 常常不回调它，
+                            // 而且和下面的定时器抽取会互相覆盖数据（曾经两套逻辑打架，
+                            // 表现为「抓不到 / 数据乱跳」）。统一只走定时器。
+                            webViewClient = WebViewClient()
                             loadUrl(targetUrl)
                             webView = this
 
@@ -210,6 +171,8 @@ fun PlatformWebView(
                             // 用定时器兜底，到点就抽，抽到即停。
                             // 不再模拟滑动：会误触打开视频，副作用太大。
                             // 作品总数由页面头部数字判断，见 EXTRACT_JS 的 w 字段。
+                            // 兜底：最迟 13 秒把转圈停掉，否则界面会一直卡在「读取中」
+                            postDelayed({ loading = false }, 13000L)
                             listOf(2000L, 3500L, 5000L, 8000L, 12000L).forEach { delayMs ->
                                 postDelayed({
                                     evaluateJavascript(EXTRACT_JS) { raw ->                                        val parsed = parseItems(raw)
