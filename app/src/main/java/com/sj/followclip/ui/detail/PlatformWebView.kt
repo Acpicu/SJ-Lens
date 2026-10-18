@@ -175,7 +175,8 @@ fun PlatformWebView(
                             postDelayed({ loading = false }, 13000L)
                             listOf(2000L, 3500L, 5000L, 8000L, 12000L).forEach { delayMs ->
                                 postDelayed({
-                                    evaluateJavascript(EXTRACT_JS) { raw ->                                        val parsed = parseItems(raw)
+                                    evaluateJavascript(EXTRACT_JS) { raw ->
+                                        val parsed = parseItems(raw)
                                         debug = parsed.debug
                                         if (parsed.workCount > 0) {
                                             // 只有连续两次读到同一个数字才算稳定。
