@@ -49,6 +49,7 @@ import com.sj.followclip.ui.detail.PlatformVideosScreen
 import com.sj.followclip.ui.detail.PlatformWebView
 import com.sj.followclip.ui.evidence.EvidenceScreen
 import com.sj.followclip.ui.evidence.ReportScreen
+import com.sj.followclip.ui.guide.AnalysisGuideScreen
 import com.sj.followclip.ui.guide.GuideScreen
 import com.sj.followclip.ui.guide.UsageGuideDialog
 import com.sj.followclip.ui.guide.markUsageGuideShown
@@ -81,6 +82,7 @@ object Routes {
     const val FIELD_MANUAL = "fieldManual"
     const val GUIDE = "guide"
     const val RECORD = "record"
+    const val ANALYSIS = "analysis"
 
     const val ARG_PERSON_ID = "personId"
     const val ARG_PLATFORM = "platform"
@@ -251,7 +253,12 @@ fun AppNavigation() {
                     onOpenManual = { navController.navigate(Routes.FIELD_MANUAL) },
                     onOpenGuide = { navController.navigate(Routes.GUIDE) },
                     onOpenRecord = { navController.navigate(Routes.RECORD) },
+                    onOpenAnalysis = { navController.navigate(Routes.ANALYSIS) },
                 )
+            }
+
+            composable(Routes.ANALYSIS) {
+                AnalysisGuideScreen(onBack = { navController.popBackStackSafely() })
             }
 
             composable(Routes.RECORD) {

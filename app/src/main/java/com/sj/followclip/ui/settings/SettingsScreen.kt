@@ -58,6 +58,7 @@ fun SettingsScreen(
     onOpenManual: () -> Unit,
     onOpenGuide: () -> Unit,
     onOpenRecord: () -> Unit,
+    onOpenAnalysis: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -200,6 +201,13 @@ fun SettingsScreen(
                         summary = "一条新作品记下哪些字段、能推出什么、数据存在哪、怎么删",
                         action = "查看",
                         onAction = onOpenRecord
+                    )
+                    Spacer(Modifier.height(Spacing.gridGap))
+                    ActionRow(
+                        title = "怎么分析",
+                        summary = "四份数据各管什么、能得出什么结论、可信度、速记与证据怎么衔接",
+                        action = "查看",
+                        onAction = onOpenAnalysis
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
@@ -462,7 +470,8 @@ private fun SettingsScreenPreview() {
             onOpenAudit = {},
             onOpenManual = {},
             onOpenGuide = {},
-            onOpenRecord = {}
+            onOpenRecord = {},
+            onOpenAnalysis = {}
         )
     }
 }
