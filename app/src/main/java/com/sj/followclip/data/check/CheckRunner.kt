@@ -99,6 +99,8 @@ object CheckRunner {
                 continue
             }
 
+            // 和 B站 一样给个间隔：连续打接口是风控最爱抓的模式
+            kotlinx.coroutines.delay(900)
             val fetched = HttpProfileChecker.fetch(account.platform, account.homepageUrl)
             if (fetched.isFailure) {
                 results += AccountCheckResult(

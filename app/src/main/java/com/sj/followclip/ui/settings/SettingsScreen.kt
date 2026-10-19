@@ -66,6 +66,7 @@ fun SettingsScreen(
     var confirmClearAll by remember { mutableStateOf(false) }
     var confirmClearPending by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf("") }
+    var confirmExport by remember { mutableStateOf(false) }
 
     val cacheSize = remember(tick) { CacheCleaner.sizeBytes(context) }
     val biliLogged = remember(tick) { BiliSource.isLoggedIn() }
@@ -149,7 +150,7 @@ fun SettingsScreen(
                         title = "导出数据",
                         summary = "目标、平台账号与数据本记录存成一个 JSON，换机或交接时用",
                         action = "导出",
-                        onAction = { exportLauncher.launch("sjlens-backup.json") }
+                        onAction = { confirmExport = true }
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
@@ -302,6 +303,25 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (confirmExport) {
+        AlertDialog(
+            onDismissRequest = { confirmExport = false },
+            title = { Text("导出全部数据？") },
+            text = {
+                Text("这份 JSON 含全部目标资料与数据本记录，请勿外发或放在共享目录。")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmExport = false
+                    exportLauncher.launch("sjlens-backup.json")
+                }) { Text("继续导出") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmExport = false }) { Text("取消") }
+            }
+        )
     }
 
     if (confirmClearPending) {

@@ -42,6 +42,9 @@ android {
                 keyAlias = keystoreProps.getProperty("keyAlias")
                 keyPassword = keystoreProps.getProperty("keyPassword")
             }
+            // v3 支持密钥轮换：以后换签名也能覆盖安装；v4 供 Play 增量安装
+            enableV3Signing = true
+            enableV4Signing = true
         }
     }
 

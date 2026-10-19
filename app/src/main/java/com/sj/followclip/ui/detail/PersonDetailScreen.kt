@@ -58,6 +58,7 @@ import com.sj.followclip.data.local.Confidence
 import com.sj.followclip.data.local.RecordKind
 import com.sj.followclip.domain.model.Account
 import com.sj.followclip.domain.model.Person
+import com.sj.followclip.domain.model.Platform
 import com.sj.followclip.domain.model.totalUnread
 import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.theme.SJFollowClipTheme
@@ -361,6 +362,15 @@ private fun AccountCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.textMuted
                 )
+
+                if (account.platform == Platform.KUAISHOU) {
+                    Spacer(Modifier.height(Spacing.tinyGap))
+                    Text(
+                        text = "快手只在应用前台检查（后台会跳过）",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
 
                 // 主页链接直接露出来：红队最常确认的第一件事就是「当初填的是哪个链接」
                 if (account.homepageUrl.isNotBlank()) {

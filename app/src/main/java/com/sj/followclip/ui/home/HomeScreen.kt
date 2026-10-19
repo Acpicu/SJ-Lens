@@ -259,7 +259,9 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.textMuted
                         )
                     }
-                    lastResults.forEach { r ->
+                    val changed = lastResults.filter { it.newCount > 0 || it.note.isNotBlank() }
+                    val unchanged = lastResults.size - changed.size
+                    changed.forEach { r ->
                         Text(
                             text = "${r.accountLabel} · ${r.platform.displayName}",
                             style = MaterialTheme.typography.bodyMedium,
@@ -286,6 +288,14 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.textMuted
                     )
                     Spacer(Modifier.height(Spacing.tinyGap))
+                    if (unchanged > 0) {
+                        Text(
+                            text = "其余 $unchanged 个账号无变化",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.textMuted
+                        )
+                        Spacer(Modifier.height(Spacing.tinyGap))
+                    }
                     if (!lastWasManual) {
                         Text(
                             text = "这一轮只查了 B站；抖音/快手要手动点「检查」。",

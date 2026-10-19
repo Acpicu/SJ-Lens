@@ -94,6 +94,18 @@ object Notifications {
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pending)
+            .addAction(
+                0,
+                "取消",
+                PendingIntent.getService(
+                    context,
+                    9,
+                    Intent(context, com.sj.followclip.data.check.CheckService::class.java).apply {
+                        action = com.sj.followclip.data.check.CheckService.ACTION_CANCEL
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
             .build()
 
         return notification

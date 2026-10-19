@@ -211,7 +211,13 @@ object BiliSource {
 
     private fun loadCookies(ctx: Context): MutableMap<String, String> {
         val prefs = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-        val raw = prefs.getString("cookies", null) ?: return mutableMapOf()
+        // 旧版本把 Cookie 明文存在这里：读一次就迁走并删掉明文
+        val legacy = prefs.getString("cookies", null)
+        if (legacy != null) {
+            com.sj.followclip.util.SecureStore.put(ctx, "cookies", legacy)
+            prefs.edit().remove("cookies").apply()
+        }
+        val raw = com.sj.followclip.util.SecureStore.get(ctx, "cookies") ?: return mutableMapOf()
         return runCatching {
             val o = JSONObject(raw)
             mutableMapOf<String, String>().apply {
@@ -224,8 +230,9 @@ object BiliSource {
         runCatching {
             val o = JSONObject()
             jar.forEach { (k, v) -> o.put(k, v) }
-            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-                .edit().putString("cookies", o.toString()).apply()
+            // SESSDATA 等登录令牌走 Keystore 加密后再落盘，不再明文躺在 SharedPreferences 里
+            com.sj.followclip.util.SecureStore.put(ctx, "cookies", o.toString())
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().remove("cookies").apply()
         }
     }
 

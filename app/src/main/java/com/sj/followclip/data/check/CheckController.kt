@@ -129,7 +129,13 @@ object CheckController {
             statusLine = "还没有可检查的卡片"
             return
         }
-        CheckService.start(context)
+        val started = CheckService.start(context)
+        if (!started) {
+            // 系统不让起前台服务（部分 ROM / 后台限制）：退回应用内协程，
+            // 并把原因写在状态行，用户不会以为"点了没反应"
+            statusLine = "后台服务被系统拦下，改用前台执行"
+            scope.launch { execute(context, persons, includeWeb) }
+        }
     }
 
     /** 上一轮是不是手动触发的（手动才弹逐账号明细）。 */

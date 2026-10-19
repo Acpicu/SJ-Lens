@@ -12,6 +12,7 @@ import com.sj.followclip.util.Notifications
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -31,6 +32,11 @@ class CheckService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 用户点了通知上的「取消」
+        if (intent?.action == ACTION_CANCEL) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         Notifications.ensureChannel(this)
 
         // 先把自己提到前台，否则 Android 8+ 会直接杀进程
@@ -66,6 +72,12 @@ class CheckService : Service() {
         return START_NOT_STICKY
     }
 
+    override fun onDestroy() {
+        // 服务被停（用户点了取消 / 系统回收）：协程一起收掉，别留下半个 WebView
+        scope.cancel()
+        super.onDestroy()
+    }
+
     private fun stopForegroundCompat() {
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -78,15 +90,16 @@ class CheckService : Service() {
     }
 
     companion object {
+        const val ACTION_CANCEL = "com.sj.followclip.CANCEL_CHECK"
         private const val NOTIFICATION_ID = 2001
 
-        fun start(context: Context) {
-            runCatching {
-                ContextCompat.startForegroundService(
-                    context,
-                    Intent(context, CheckService::class.java)
-                )
-            }
-        }
+        /** @return 是否成功把服务拉起来；失败由调用方降级处理，绝不静默吞掉。 */
+        fun start(context: Context): Boolean = runCatching {
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, CheckService::class.java)
+            )
+            true
+        }.getOrDefault(false)
     }
 }

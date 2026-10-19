@@ -30,6 +30,8 @@ object CacheCleaner {
 
     /** 清缓存；返回清掉了多少字节。 */
     fun clear(context: Context): Long {
+        // 检查正在跑时别动 WebView 的目录：快手/抖音渲染依赖它，删了会当场打断
+        if (com.sj.followclip.data.check.CheckController.running) return 0L
         val before = sizeBytes(context)
         runCatching {
             targets(context).forEach { dir ->
