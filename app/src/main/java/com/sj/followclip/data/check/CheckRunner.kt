@@ -214,18 +214,57 @@ object CheckRunner {
             results += ks.results
             items += ks.items
         } else if (includeWeb) {
-            // 后台没有窗口：如实记一笔，别让「没查」看起来像「没有更新」
+            // 后台没有窗口也能查：走分享落地页的 HTTP 直取（见 KuaishouHttpProbe）
             persons.forEach { person ->
                 person.accounts
                     .filter { it.platform == Platform.KUAISHOU && it.homepageUrl.isNotBlank() }
                     .forEach { account ->
-                        results += AccountCheckResult(
-                            personId = person.id,
-                            accountId = account.id,
-                            accountLabel = account.displayTitle,
-                            platform = Platform.KUAISHOU,
-                            note = "后台没有窗口，快手要前台才查得了；下次打开应用会自动补查"
-                        )
+                        kotlinx.coroutines.delay(900)
+                        val count = com.sj.followclip.data.source.web.KuaishouHttpProbe
+                            .count(account.homepageUrl)
+                        if (count == null) {
+                            results += AccountCheckResult(
+                                personId = person.id,
+                                accountId = account.id,
+                                accountLabel = account.displayTitle,
+                                platform = Platform.KUAISHOU,
+                                note = "这轮没取到作品数（分享页没给「作品 N」），下次打开应用会补查"
+                            )
+                        } else {
+                            val cached = WebProfileStore.load(context, account.id)
+                            val now = StoredProfile(
+                                workCount = count,
+                                // HTTP 只有数字：昵称/简介沿用上次，别清空
+                                nickname = cached?.nickname.orEmpty(),
+                                signature = cached?.signature.orEmpty()
+                            )
+                            val delta = WebProfileStore.diff(cached, now)
+                            WebProfileStore.save(context, account.id, now)
+                            var newCount = 0
+                            if (delta.workAdded > 0) {
+                                newCount++
+                                items += PendingItem(
+                                    bvid = "ks-http-${account.id}-$count",
+                                    title = "作品数 ${cached?.workCount} → $count（新增 ${delta.workAdded} 条）",
+                                    personId = person.id,
+                                    personName = person.remarkName,
+                                    platform = Platform.KUAISHOU.name,
+                                    link = account.homepageUrl,
+                                    kind = "PROFILE",
+                                    foundAt = System.currentTimeMillis()
+                                )
+                            }
+                            results += AccountCheckResult(
+                                personId = person.id,
+                                accountId = account.id,
+                                accountLabel = account.displayTitle,
+                                platform = Platform.KUAISHOU,
+                                fetched = count,
+                                newCount = newCount,
+                                baseline = delta.baseline,
+                                note = if (delta.baseline) "首次检查已建基线：作品 $count" else "HTTP 直取"
+                            )
+                        }
                     }
             }
         }
