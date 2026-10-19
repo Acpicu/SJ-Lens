@@ -13,8 +13,8 @@ enum class Platform(
     /** 仅 B 站走原生 HTTP，能可靠后台运行 */
     val supportAutoCheck: Boolean
 ) {
-    DOUYIN("抖音", isExperimental = true, supportAutoCheck = false),
-    KUAISHOU("快手", isExperimental = true, supportAutoCheck = false),
+    DOUYIN("抖音", isExperimental = false, supportAutoCheck = true),
+    KUAISHOU("快手", isExperimental = false, supportAutoCheck = false),
     BILI("B站", isExperimental = false, supportAutoCheck = true)
 }
 

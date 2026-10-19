@@ -128,7 +128,7 @@ object KuaishouChecker {
                             personId = personId,
                             personName = personName,
                             platform = account.platform.name,
-                            link = account.homepageUrl,
+                            link = if (snapshot.url.isNotBlank()) snapshot.url else account.homepageUrl,
                             kind = "PROFILE",
                             foundAt = System.currentTimeMillis()
                         )
@@ -141,7 +141,7 @@ object KuaishouChecker {
                             personId = personId,
                             personName = personName,
                             platform = account.platform.name,
-                            link = account.homepageUrl,
+                            link = if (snapshot.url.isNotBlank()) snapshot.url else account.homepageUrl,
                             kind = "PROFILE",
                             foundAt = System.currentTimeMillis()
                         )
@@ -154,7 +154,7 @@ object KuaishouChecker {
                             personId = personId,
                             personName = personName,
                             platform = account.platform.name,
-                            link = account.homepageUrl,
+                            link = if (snapshot.url.isNotBlank()) snapshot.url else account.homepageUrl,
                             kind = "PROFILE",
                             foundAt = System.currentTimeMillis()
                         )
@@ -191,10 +191,10 @@ object KuaishouChecker {
         url.contains("/short-video/") || url.contains("/fw/live/")
 
     private data class KsProfile(
-        val count: Int,
-        val rendered: Boolean,
-        val name: String,
-        val bio: String
+        val count: Int = -1,
+        val name: String = "",
+        val bio: String = "",
+        val url: String = ""
     )
 
     /** 打开主页，等渲染，抠「作品 N」/ 昵称 / 简介。 */
@@ -266,7 +266,7 @@ object KuaishouChecker {
             if (!m) m = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(万)?\s*作品/);
             if (m) {
               count = Math.round(parseFloat(m[1]) * (m[2] ? 10000 : 1));
-              rendered = true;   // 能读到「N 作品」就说明页面一定渲染出来了
+              rendered = true;
             } else if (rendered) {
               // 页面正常但没有「N 作品」的数字 —— 这个号就是一条都没发
               count = 0;
@@ -283,9 +283,9 @@ object KuaishouChecker {
             val o = JSONObject(inner)
             KsProfile(
                 count = o.optInt("count", -1),
-                rendered = o.optBoolean("rendered", false),
                 name = o.optString("name"),
-                bio = o.optString("bio")
+                bio = o.optString("bio"),
+                url = o.optString("url")
             )
         }.getOrNull()
     }

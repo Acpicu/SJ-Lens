@@ -266,25 +266,39 @@ private fun TextResultCard(item: PendingItem, onClick: () -> Unit) {
  * B站 投稿走 App 深链、动态走 t.bilibili.com。
  */
 private fun openContent(context: Context, item: PendingItem) {
+    // 按平台拼深链：装了就直奔 App 内的那一条/那一页，没装再退回网页
     val candidates = buildList {
-        if (item.link.isNotBlank()) add(item.link)
-        when {
-            item.kind == "DYNAMIC" -> {
-                add("https://t.bilibili.com/${item.bvid}")
+        when (item.platform) {
+            "BILI" -> {
+                if (item.kind == "DYNAMIC") {
+                    add("https://t.bilibili.com/${item.bvid}")
+                } else {
+                    add("bilibili://video/${item.bvid}")
+                    add("https://www.bilibili.com/video/${item.bvid}")
+                }
             }
-            item.platform == "BILI" -> {
-                add("bilibili://video/${item.bvid}")
-                add("https://www.bilibili.com/video/${item.bvid}")
+
+            "DOUYIN" -> {
+                val secUid = Regex("""/user/(MS4wLjAB[A-Za-z0-9_-]+)""")
+                    .find(item.link)?.groupValues?.get(1)
+                if (secUid != null) add("snssdk1128://user/profile/$secUid")
+                if (item.kind != "PROFILE" && item.bvid.length > 8) {
+                    add("snssdk1128://aweme/detail/${item.bvid}")
+                }
+                if (item.link.isNotBlank()) add(item.link)
             }
-            item.platform == "DOUYIN" -> {
-                add("snssdk1128://aweme/detail/${item.bvid}")
-                add("https://www.douyin.com/video/${item.bvid}")
-            }
-            item.platform == "KUAISHOU" -> {
-                add("kwai://work/${item.bvid}")
-                add("https://www.kuaishou.com/short-video/${item.bvid}")
+
+            "KUAISHOU" -> {
+                val videoId = Regex("""/short-video/([A-Za-z0-9_-]+)""")
+                    .find(item.link)?.groupValues?.get(1)
+                val userId = Regex("""/(?:fw/user|profile)/([A-Za-z0-9_-]+)""")
+                    .find(item.link)?.groupValues?.get(1)
+                if (videoId != null) add("kwai://work/$videoId")
+                if (userId != null) add("kwai://profile/$userId")
+                if (item.link.isNotBlank()) add(item.link)
             }
         }
+        if (item.link.isNotBlank() && item.link !in this) add(item.link)
     }
     candidates.forEach { target ->
         val opened = runCatching {
