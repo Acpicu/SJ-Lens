@@ -169,12 +169,20 @@ fun SettingsScreen(
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
                         title = "清理缓存",
-                        summary = "网页缓存占 ${CacheCleaner.format(cacheSize)}，清掉不影响数据本、截图与登录",
-                        action = "清理",
-                        onAction = {
-                            CacheCleaner.clear(context)
-                            tick++
-                            importResult = "已清缓存"
+                        summary = if (cacheSize < 512 * 1024) {
+                            "当前没有需要清理的缓存"
+                        } else {
+                            "网页缓存占 ${CacheCleaner.format(cacheSize)}，清掉不影响数据本、截图与登录"
+                        },
+                        action = if (cacheSize < 512 * 1024) null else "清理",
+                        onAction = if (cacheSize < 512 * 1024) {
+                            null
+                        } else {
+                            {
+                                CacheCleaner.clear(context)
+                                tick++
+                                importResult = "已清缓存"
+                            }
                         }
                     )
                     Spacer(Modifier.height(Spacing.gridGap))

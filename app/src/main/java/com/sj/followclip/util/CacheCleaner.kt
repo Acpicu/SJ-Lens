@@ -38,12 +38,11 @@ object CacheCleaner {
                 }
             }
         }
+        // 整棵删除 app_webview（含 Code Cache / GPUCache / Service Worker）
         runCatching {
-            WebView(context.applicationContext).apply {
-                clearCache(true)
-                clearFormData()
-                clearHistory()
-                destroy()
+            context.filesDir?.parentFile?.let { parent ->
+                File(parent, "app_webview").takeIf { it.exists() }?.deleteRecursively()
+                File(parent, "app_textures").takeIf { it.exists() }?.deleteRecursively()
             }
         }
         return (before - sizeBytes(context)).coerceAtLeast(0L)

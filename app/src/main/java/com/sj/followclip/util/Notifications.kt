@@ -19,7 +19,7 @@ import com.sj.followclip.R
  */
 object Notifications {
 
-    private const val CHANNEL_ID = "new_content"
+    private const val CHANNEL_ID = "new_content_v2"
     private const val NOTIFICATION_ID = 1001
 
     /** 检查进行中的常驻横幅：独立渠道，低打扰、不可滑走。 */
@@ -32,9 +32,13 @@ object Notifications {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "有更新",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply { description = "关注的博主有新作品时提醒" }
+                "有更新/检查完成",
+                NotificationManager.IMPORTANCE_HIGH   // HIGH 才会弹横幅（悬浮通知）
+            ).apply {
+                description = "检查完成、发现新内容时弹出横幅"
+                enableVibration(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
         )
         manager.createNotificationChannel(
             NotificationChannel(
@@ -111,7 +115,9 @@ object Notifications {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("检查报告已生成")
             .setContentText(if (added > 0) "本轮发现 $added 条变化，点开看明细" else "本轮没有新变化")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .setContentIntent(pending)
             .build()

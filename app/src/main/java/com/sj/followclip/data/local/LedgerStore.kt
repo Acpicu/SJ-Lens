@@ -420,6 +420,18 @@ object LedgerStore {
                 }
                 builder.append('\n')
             }
+            val timeline = records.filter { it.at > 0L }.sortedBy { it.at }
+            if (timeline.isNotEmpty()) {
+                builder.append("### 时间线\n\n")
+                timeline.forEach { record ->
+                    builder.append("- ").append(fmt.format(Date(record.at))).append("  ")
+                        .append(record.id).append(" · ").append(record.kind.label)
+                        .append(" · ").append(record.title).append("：").append(record.value)
+                        .append("\n")
+                }
+                builder.append('\n')
+            }
+
             if (targetStats.missing.isNotEmpty()) {
                 builder.append("### 缺口\n\n")
                 builder.append("- 尚未登记：").append(targetStats.missing.joinToString("、")).append('\n')
