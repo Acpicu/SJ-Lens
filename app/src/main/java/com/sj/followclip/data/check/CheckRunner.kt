@@ -166,6 +166,20 @@ object CheckRunner {
                 }
                 items += newItems
 
+                // 前台补一步：渲染主页抽具体作品 id，才有"哪几条是新的"和可点进 App 的链接
+                if (activity != null) {
+                    val rendered = com.sj.followclip.data.source.web.DouyinRenderChecker
+                        .fetchVideos(activity, account.homepageUrl)
+                    items += com.sj.followclip.data.source.web.DouyinRenderChecker.newItems(
+                        activity = activity,
+                        accountId = account.id,
+                        personId = personId,
+                        personName = personName,
+                        platform = account.platform.name,
+                        videos = rendered
+                    )
+                }
+
                 results += AccountCheckResult(
                     personId = personId,
                     accountId = account.id,
