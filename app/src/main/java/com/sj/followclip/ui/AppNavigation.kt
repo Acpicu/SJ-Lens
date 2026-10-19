@@ -52,6 +52,10 @@ import com.sj.followclip.ui.detail.PersonDetailScreen
 import com.sj.followclip.ui.detail.BiliLoginScreen
 import com.sj.followclip.ui.detail.PlatformVideosScreen
 import com.sj.followclip.ui.detail.PlatformWebView
+import com.sj.followclip.ui.guide.OnboardingDialog
+import com.sj.followclip.ui.guide.OnboardingScreen
+import com.sj.followclip.ui.guide.markOnboardingShown
+import com.sj.followclip.ui.guide.shouldShowOnboarding
 import com.sj.followclip.ui.home.HomeScreen
 import com.sj.followclip.ui.ledger.LedgerOverviewScreen
 import com.sj.followclip.ui.ledger.LedgerReportScreen
@@ -78,6 +82,7 @@ object Routes {
     const val CREATE_FOLDER = "createFolder"
     const val BILI_LOGIN = "biliLogin"
     const val EXPOSURE_AUDIT = "exposureAudit"
+    const val GUIDE = "guide"
 
     /** 数据本 · 全部目标（从设置页 OSINT 区进） */
     const val LEDGER_ALL = "ledgerAll"
@@ -132,6 +137,17 @@ fun AppNavigation() {
     val context = LocalContext.current
 
     AppUiState.init(context)
+
+    // 首次启动弹一次使用引导（只弹一次；设置里随时能重开）
+    var showOnboarding by remember { mutableStateOf(shouldShowOnboarding(context)) }
+    if (showOnboarding) {
+        OnboardingDialog(
+            onDismiss = {
+                markOnboardingShown(context)
+                showOnboarding = false
+            }
+        )
+    }
 
     // 首次启动弹一次耗电管理引导（只弹一次）
     var showBatteryGuide by remember { mutableStateOf(shouldShowBatteryGuide(context)) }
@@ -254,7 +270,8 @@ fun AppNavigation() {
                 SettingsScreen(
                     onLoginBili = { navController.navigate(Routes.BILI_LOGIN) },
                     onOpenAudit = { navController.navigate(Routes.EXPOSURE_AUDIT) },
-                    onOpenLedger = { navController.navigate(Routes.LEDGER_ALL) }
+                    onOpenLedger = { navController.navigate(Routes.LEDGER_ALL) },
+                    onOpenGuide = { navController.navigate(Routes.GUIDE) }
                 )
             }
 
@@ -268,6 +285,10 @@ fun AppNavigation() {
                         navController.navigate(Routes.ledger(personId))
                     }
                 )
+            }
+
+            composable(Routes.GUIDE) {
+                OnboardingScreen(onBack = { navController.popBackStackSafely() })
             }
 
             composable(Routes.EXPOSURE_AUDIT) {

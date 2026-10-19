@@ -57,6 +57,7 @@ fun SettingsScreen(
     onLoginBili: () -> Unit,
     onOpenAudit: () -> Unit,
     onOpenLedger: () -> Unit,
+    onOpenGuide: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -213,6 +214,13 @@ fun SettingsScreen(
                         summary = "所有目标的记录汇总：计数、冲突、缺口，可跨目标搜索并一键导出",
                         action = "打开",
                         onAction = onOpenLedger
+                    )
+                    Spacer(Modifier.height(Spacing.gridGap))
+                    ActionRow(
+                        title = "使用引导",
+                        summary = "基线机制、三平台差别、后台检查、数据本用途，四条看完",
+                        action = "查看",
+                        onAction = onOpenGuide
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
@@ -485,7 +493,8 @@ private fun SettingsScreenPreview() {
         SettingsScreen(
             onLoginBili = {},
             onOpenAudit = {},
-            onOpenLedger = {}
+            onOpenLedger = {},
+            onOpenGuide = {}
         )
     }
 }
