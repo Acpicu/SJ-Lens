@@ -60,6 +60,7 @@ object KuaishouChecker {
             settings.javaScriptCanOpenWindowsAutomatically = false
             settings.setSupportMultipleWindows(false)
             settings.mediaPlaybackRequiresUserGesture = true
+            settings.blockNetworkImage = true   // 只要文字里的作品数，图片不加载：省流量省缓存
             settings.userAgentString = (settings.userAgentString ?: "")
                 .replace("; wv", "")
                 .replace(" Version/4.0", "")

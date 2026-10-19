@@ -32,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +59,9 @@ import com.sj.followclip.util.relativeTime
 fun LatestCheckScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val items = PendingStore.items
+
+    // 进来即视为看过：底部导航的角标随之清零
+    LaunchedEffect(items.size) { PendingStore.markSeen(context) }
     val grouped = items.groupBy { it.personId }
 
     Scaffold(

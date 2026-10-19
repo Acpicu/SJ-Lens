@@ -31,6 +31,7 @@ data class PendingItem(
 object PendingStore {
 
     private const val PREF = "pending_items"
+    private const val KEY_SEEN = "seen_count"
 
     val items = mutableStateListOf<PendingItem>()
 
@@ -52,6 +53,19 @@ object PendingStore {
         }
         persist(context)
     }
+
+    /** 上次打开「最近检查」时已经看过的条数；用来算底部导航的未看角标。 */
+    fun seenCount(context: Context): Int =
+        context.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY_SEEN, 0)
+
+    /** 打开「最近检查」时调用：把当前条数记为已看。 */
+    fun markSeen(context: Context) {
+        context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_SEEN, items.size).apply()
+    }
+
+    /** 未看条数。 */
+    fun unseenCount(context: Context): Int = (items.size - seenCount(context)).coerceAtLeast(0)
 
     fun clearAll(context: Context) {
         items.clear()

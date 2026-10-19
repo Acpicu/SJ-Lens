@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.sj.followclip.data.check.CheckController
+import com.sj.followclip.data.local.PendingStore
 import com.sj.followclip.data.work.CheckScheduler
 import com.sj.followclip.data.work.CheckWorker
 import com.sj.followclip.ui.common.BatteryGuideDialog
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -188,7 +191,23 @@ fun AppNavigation() {
                                 unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
-                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            icon = {
+                                // 「最近检查」带未看角标：新结果来了不点进去也知道
+                                val unseen = if (item.route == Routes.UNCONFIRMED) {
+                                    val ctx = LocalContext.current
+                                    PendingStore.items.size
+                                    PendingStore.unseenCount(ctx)
+                                } else {
+                                    0
+                                }
+                                if (unseen > 0) {
+                                    BadgedBox(
+                                        badge = { Badge { Text(unseen.toString()) } }
+                                    ) { Icon(item.icon, contentDescription = item.label) }
+                                } else {
+                                    Icon(item.icon, contentDescription = item.label)
+                                }
+                            },
                             label = { Text(item.label) }
                         )
                     }
