@@ -38,7 +38,7 @@ import org.json.JSONTokener
  */
 object KuaishouChecker {
 
-    private const val RENDER_WAIT_MS = 5_000L
+    private const val RENDER_WAIT_MS = 3_000L
     private const val PAGE_TIMEOUT_MS = 18_000L
 
     suspend fun checkAll(
@@ -236,12 +236,12 @@ object KuaishouChecker {
         delay(RENDER_WAIT_MS)
 
         // 快手主页是懒加载的，读不到就再等一轮
-        repeat(4) { attempt ->
+        repeat(5) { attempt ->
             val raw = CompletableDeferred<String?>()
             webView.evaluateJavascript(EXTRACT_JS) { value -> raw.complete(value) }
             val parsed = parse(withTimeoutOrNull(4_000L) { raw.await() })
             if (parsed != null && parsed.count >= 0) return parsed
-            if (attempt < 3) delay(3_000L)
+            if (attempt < 4) delay(2_000L)
         }
         return null
     }

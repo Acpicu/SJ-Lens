@@ -280,6 +280,12 @@ fun HomeScreen(
                         )
                         Spacer(Modifier.height(Spacing.itemGap))
                     }
+                    Text(
+                        text = "首次检查的账号只建基线（记下当前作品数与昵称），第二轮起才报变化。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.textMuted
+                    )
+                    Spacer(Modifier.height(Spacing.tinyGap))
                     if (!lastWasManual) {
                         Text(
                             text = "这一轮只查了 B站；抖音/快手要手动点「检查」。",

@@ -101,6 +101,16 @@ fun LatestCheckScreen(modifier: Modifier = Modifier) {
             ),
             verticalArrangement = Arrangement.spacedBy(Spacing.tinyGap)
         ) {
+            item(key = "baseline-note") {
+                Text(
+                    text = "检查靠基线：第一次检查只把当前状态记下来（作品数 / 昵称 / 简介），" +
+                        "所以第一轮不会报更新；从第二轮起每次跟基线比对，变了才出现在这里。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.textMuted,
+                    modifier = Modifier.padding(top = Spacing.gridGap, bottom = Spacing.tinyGap)
+                )
+            }
+
             grouped.forEach { (personId, list) ->
                 item(key = "h-$personId") {
                     Row(
