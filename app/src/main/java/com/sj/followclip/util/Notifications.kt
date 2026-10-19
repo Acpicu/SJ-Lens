@@ -56,7 +56,17 @@ object Notifications {
         updateChecking(context, 0, total, "准备中")
     }
 
+    /** 前台服务启动时要传一个 Notification，这里复用同一套内容。 */
+    fun checkingNotification(context: Context, done: Int, total: Int, label: String): android.app.Notification =
+        buildChecking(context, done, total, label)
+
     fun updateChecking(context: Context, done: Int, total: Int, label: String) {
+        runCatching {
+            NotificationManagerCompat.from(context).notify(CHECKING_ID, buildChecking(context, done, total, label))
+        }
+    }
+
+    private fun buildChecking(context: Context, done: Int, total: Int, label: String): android.app.Notification {
         val safeTotal = total.coerceAtLeast(1)
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -82,9 +92,7 @@ object Notifications {
             .setContentIntent(pending)
             .build()
 
-        runCatching {
-            NotificationManagerCompat.from(context).notify(CHECKING_ID, notification)
-        }
+        return notification
     }
 
     /** 后台检查完成：给一条可点的结果通知（前台检查有明细弹窗，不重复打扰）。 */

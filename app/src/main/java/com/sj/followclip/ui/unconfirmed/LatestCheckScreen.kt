@@ -276,26 +276,26 @@ private fun TextResultCard(item: PendingItem, onClick: () -> Unit) {
  * B站 投稿走 App 深链、动态走 t.bilibili.com。
  */
 private fun openContent(context: Context, item: PendingItem) {
-    // 按平台拼深链：装了就直奔 App 内的那一条/那一页，没装再退回网页
+    // 每个平台给多个候选：先试能直接进 App 内页面的深链，再退网页。
+    // 各家深链版本差异大，单靠一个 scheme 必然有踩空的时候。
     val candidates = buildList {
         when (item.platform) {
             "BILI" -> {
-                if (item.kind == "DYNAMIC") {
-                    add("https://t.bilibili.com/${item.bvid}")
-                } else {
-                    add("bilibili://video/${item.bvid}")
-                    add("https://www.bilibili.com/video/${item.bvid}")
-                }
+                if (item.kind == "DYNAMIC") add("https://t.bilibili.com/${item.bvid}")
+                else add("bilibili://video/${item.bvid}")
             }
 
             "DOUYIN" -> {
                 val secUid = Regex("""/user/(MS4wLjAB[A-Za-z0-9_-]+)""")
                     .find(item.link)?.groupValues?.get(1)
-                if (secUid != null) add("snssdk1128://user/profile/$secUid")
                 if (item.kind != "PROFILE" && item.bvid.length > 8) {
                     add("snssdk1128://aweme/detail/${item.bvid}")
+                    add("snssdk1128://video/${item.bvid}")
                 }
-                if (item.link.isNotBlank()) add(item.link)
+                if (secUid != null) {
+                    add("snssdk1128://user/profile/$secUid")
+                    add("snssdk1128://user/$secUid")
+                }
             }
 
             "KUAISHOU" -> {
@@ -303,13 +303,22 @@ private fun openContent(context: Context, item: PendingItem) {
                     .find(item.link)?.groupValues?.get(1)
                 val userId = Regex("""/(?:fw/user|profile)/([A-Za-z0-9_-]+)""")
                     .find(item.link)?.groupValues?.get(1)
-                if (videoId != null) add("kwai://work/$videoId")
-                if (userId != null) add("kwai://profile/$userId")
-                if (item.link.isNotBlank()) add(item.link)
+                if (videoId != null) {
+                    add("kwai://work/$videoId")
+                    add("kwai://short-video/$videoId")
+                }
+                if (userId != null) {
+                    add("kwai://profile/$userId")
+                    add("kwai://user/profile/$userId")
+                    add("kwai://home/user/$userId")
+                }
             }
         }
-        if (item.link.isNotBlank() && item.link !in this) add(item.link)
+        // 网页兜底永远放最后
+        if (item.link.isNotBlank()) add(item.link)
+        if (item.platform == "BILI") add("https://www.bilibili.com/video/${item.bvid}")
     }
+
     candidates.forEach { target ->
         val opened = runCatching {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))

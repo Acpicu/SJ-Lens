@@ -25,6 +25,9 @@ import com.sj.followclip.domain.model.Platform
  */
 object CheckRunner {
 
+    /** 结果缓存有效期：10 分钟内的重复检查不再打网络。 */
+    private const val CACHE_TTL_MS = 10 * 60_000L
+
     /**
      * @param activity 前台才有；为 null 时快手会被跳过（后台任务的常态）
      * @param includeWeb 是否连抖音/快手一起查（自动检查只查 B站 + 抖音，快）
@@ -78,6 +81,24 @@ object CheckRunner {
         // ---------- 2) 抖音（纯 HTTP） ----------
         for ((personId, account) in httpJobs) {
             val personName = persons.firstOrNull { it.id == personId }?.remarkName ?: ""
+
+            // 缓存优先：10 分钟内查过就直接复用，省一次网络往返（也省心）
+            val cached = WebProfileStore.loadFresh(context, account.id, CACHE_TTL_MS)
+            if (cached != null) {
+                results += AccountCheckResult(
+                    personId = personId,
+                    accountId = account.id,
+                    accountLabel = account.displayTitle,
+                    platform = account.platform,
+                    fetched = cached.workCount.coerceAtLeast(0),
+                    newCount = 0,
+                    note = "缓存（10 分钟内刚查过）"
+                )
+                done++
+                onProgress(done, total, account.platform.displayName)
+                continue
+            }
+
             val fetched = HttpProfileChecker.fetch(account.platform, account.homepageUrl)
             if (fetched.isFailure) {
                 results += AccountCheckResult(

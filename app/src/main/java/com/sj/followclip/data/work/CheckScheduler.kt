@@ -22,20 +22,12 @@ object CheckScheduler {
     private const val WORK_NAME = "auto_check_periodic"
 
     fun schedule(context: Context) {
-        val request = PeriodicWorkRequestBuilder<CheckWorker>(60, TimeUnit.MINUTES)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
-
-        // KEEP：重复调用不会重置已有排期，避免每次开应用都把计时清零
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            request
-        )
+        // 不再做 60 分钟周期的后台轮询：
+        // 现在改成「打开应用自动查一轮」，由前台服务保证退出应用也能跑完并通知。
+        runCatching {
+            androidx.work.WorkManager.getInstance(context)
+                .cancelUniqueWork(WORK_NAME)
+        }
     }
 
     fun cancel(context: Context) {

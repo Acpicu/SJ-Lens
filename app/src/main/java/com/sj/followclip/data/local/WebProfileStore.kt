@@ -7,7 +7,9 @@ import org.json.JSONObject
 data class StoredProfile(
     val workCount: Int = -1,
     val nickname: String = "",
-    val signature: String = ""
+    val signature: String = "",
+    /** 上次成功抓取的时间戳，用于命中缓存 */
+    val at: Long = 0L
 )
 
 /** 两次快照之间的差异。红队关心的就这三件事：发了多少、叫什么、简介写了什么。 */
@@ -44,7 +46,8 @@ object WebProfileStore {
             StoredProfile(
                 workCount = o.optInt("count", -1),
                 nickname = o.optString("nick"),
-                signature = o.optString("sig")
+                signature = o.optString("sig"),
+                at = o.optLong("at")
             )
         }.getOrNull()
     }
@@ -55,9 +58,17 @@ object WebProfileStore {
                 .put("count", profile.workCount)
                 .put("nick", profile.nickname)
                 .put("sig", profile.signature)
+                .put("at", if (profile.at > 0L) profile.at else System.currentTimeMillis())
             context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
                 .edit().putString("p_$accountId", o.toString()).apply()
         }
+    }
+
+    /** 缓存命中：返回 ttl 以内抓到的快照，过期或没有则 null。 */
+    fun loadFresh(context: Context, accountId: Long, ttlMs: Long): StoredProfile? {
+        val cached = load(context, accountId) ?: return null
+        if (cached.at <= 0L) return null
+        return cached.takeIf { System.currentTimeMillis() - it.at <= ttlMs }
     }
 
     fun clearAll(context: Context) {

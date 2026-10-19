@@ -80,7 +80,7 @@ class CheckWorker(
         private const val PREF = "check_flags"
         private const val KEY_KUAISHOU_PENDING = "kuaishou_pending"
 
-        private fun markKuaishouPending(context: Context) {
+        fun markKuaishouPending(context: Context) {
             context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
                 .edit().putBoolean(KEY_KUAISHOU_PENDING, true).apply()
         }

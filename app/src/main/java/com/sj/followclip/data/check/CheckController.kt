@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sj.followclip.data.local.PendingStore
+import com.sj.followclip.data.work.CheckWorker
 import com.sj.followclip.data.source.bili.AccountCheckResult
 import com.sj.followclip.domain.model.Person
 import com.sj.followclip.ui.state.AppUiState
@@ -67,58 +68,70 @@ object CheckController {
      *
      * @param includeWeb 手动检查为 true；进应用自动跑那一轮也只查 B站 + 抖音
      */
+    /**
+     * 真正干活的地方。放在前台服务里跑：用户点完检查就退出应用去做别的事，
+     * 这一轮照样跑完并推送「检查报告已生成」。
+     */
+    suspend fun execute(context: Context, persons: List<Person>, includeWeb: Boolean) {
+        val appContext = context.applicationContext
+        val snapshotOfPersons = persons.toList()
+        lastManual = includeWeb
+
+        running = true
+        done = 0
+        total = snapshotOfPersons.sumOf { it.accounts.size }.coerceAtLeast(1)
+        label = ""
+        statusLine = "检查中…"
+        Notifications.startChecking(appContext, total)
+
+        val outcome = CheckRunner.run(
+            context = appContext,
+            persons = snapshotOfPersons,
+            // 快手要真实窗口：应用在前台才拿得到 Activity
+            activity = CurrentActivity.get(),
+            includeWeb = includeWeb
+        ) { d, all, current ->
+            done = d
+            total = all
+            label = current
+            statusLine = "$current $d/$all"
+            Notifications.updateChecking(appContext, d, all, current)
+        }
+
+        PendingStore.replaceAll(appContext, outcome.items.sortedByDescending { it.foundAt })
+        outcome.results.forEach { r -> AppUiState.setUnread(r.personId, r.accountId, r.newCount) }
+
+        Notifications.stopChecking(appContext)
+
+        val added = outcome.results.sumOf { it.newCount }
+        lastResults = outcome.results
+        lastError = outcome.error
+        statusLine = outcome.error ?: if (added > 0) "本次新增 $added 条" else "没有新更新"
+        showDetail = includeWeb && outcome.results.isNotEmpty()
+
+        // 前台服务跑的一轮：完成就给一条通知，用户退出应用也能知道
+        Notifications.notifyCheckDone(appContext, added)
+
+        // 后台没有窗口时快手会被跳过：留标记，下次回到应用自动补查
+        if (outcome.results.any { it.note.contains("后台没有窗口") }) {
+            CheckWorker.markKuaishouPending(appContext)
+        }
+
+        running = false
+        delay(3_000)
+        if (!running) statusLine = ""
+    }
+
+    /** 点一下检查：交给前台服务，退出应用也不会被打断。 */
     fun start(context: Context, persons: List<Person>, includeWeb: Boolean) {
         if (running) return
         if (persons.isEmpty()) {
             statusLine = "还没有可检查的卡片"
             return
         }
-
-        val appContext = context.applicationContext
-        val snapshotOfPersons = persons.toList()
-        lastManual = includeWeb
-
-        job = scope.launch {
-            running = true
-            done = 0
-            total = snapshotOfPersons.sumOf { it.accounts.size }.coerceAtLeast(1)
-            label = ""
-            statusLine = "检查中…"
-            Notifications.startChecking(appContext, total)
-
-            val outcome = CheckRunner.run(
-                context = appContext,
-                persons = snapshotOfPersons,
-                // 快手要真实窗口：拿当前前台 Activity，没拿到就如实跳过
-                activity = CurrentActivity.get(),
-                includeWeb = includeWeb
-            ) { d, all, current ->
-                done = d
-                total = all
-                label = current
-                statusLine = "$current $d/$all"
-                Notifications.updateChecking(appContext, d, all, current)
-            }
-
-            PendingStore.replaceAll(appContext, outcome.items.sortedByDescending { it.foundAt })
-            outcome.results.forEach { r -> AppUiState.setUnread(r.personId, r.accountId, r.newCount) }
-
-            Notifications.stopChecking(appContext)
-
-            val added = outcome.results.sumOf { it.newCount }
-            lastResults = outcome.results
-            lastError = outcome.error
-            statusLine = outcome.error ?: if (added > 0) "本次新增 $added 条" else "没有新更新"
-            // 手动那一轮才弹明细；自动那一轮只更新状态文字
-            showDetail = includeWeb && outcome.results.isNotEmpty()
-
-            running = false
-            delay(3_000)
-            if (!running) statusLine = ""
-        }
+        CheckService.start(context)
     }
 
-
-    /** 手动重跑：不弹明细，只是把上一轮结果留在界面里。 */
+    /** 上一轮是不是手动触发的（手动才弹逐账号明细）。 */
     fun wasManual(): Boolean = lastManual
 }
