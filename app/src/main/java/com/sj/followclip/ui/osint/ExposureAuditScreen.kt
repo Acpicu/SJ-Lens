@@ -3,6 +3,7 @@ package com.sj.followclip.ui.osint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,9 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,10 +50,29 @@ import com.sj.followclip.data.osint.SelfProfile
 import com.sj.followclip.ui.theme.Spacing
 import com.sj.followclip.ui.theme.textMuted
 
+/** 可评估的平台。红队真正会碰到的基本就这几家。 */
+private val PLATFORMS = listOf(
+    "微信", "QQ", "微博", "小红书", "知乎", "贴吧", "B站", "抖音", "快手"
+)
+
+/** 一个「号」的输入行。平台同名可以有多行——同一个人同平台两个号是最常见的情况。 */
+private class AuditRow(platform: String) {
+    var platform by mutableStateOf(platform)
+    var nickname by mutableStateOf("")
+    var bio by mutableStateOf("")
+    var searchable by mutableStateOf(false)
+    var sameAvatar by mutableStateOf(false)
+
+    val filled: Boolean get() = nickname.isNotBlank()
+}
+
 /**
- * 曝光审计页：把自己在各平台的公开资料填进来，算「别人有多容易把这些号串成同一个人」。
+ * 关联度评估：填目标在各平台（含同平台多个号）公开可见的资料，
+ * 算「这些号能不能被认定为同一个人」，并给出下一步取证动作。
  *
- * 主体是本机主人自己。填三项即可出分，不联网、不申请任何权限、不读通讯录。
+ * 同平台的两个号也会互相比对：主号发作品、小号发日常，昵称头像一样时几乎必然高关联。
+ *
+ * 全部在内存里算，不写盘、不上传；要留证请把结论登记进数据本。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,24 +80,31 @@ fun ExposureAuditScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val platforms = listOf("B站", "抖音", "快手")
-    val nick = remember { mutableStateListOf("", "", "") }
-    val bio = remember { mutableStateListOf("", "", "") }
-    val searchable = remember { mutableStateListOf(false, false, false) }
-    val sameAvatar = remember { mutableStateListOf(false, false, false) }
+    val rows = remember { mutableStateListOf(AuditRow("微信"), AuditRow("QQ")) }
     var showDetail by remember { mutableStateOf(true) }
 
-    val profiles = platforms.indices.mapNotNull { i ->
-        if (nick[i].isBlank()) {
+    // 同平台多个号时加序号，报告里才分得清「微信①」「微信②」
+    val labels = rows.mapIndexed { index, row ->
+        val sameCount = rows.count { it.platform == row.platform }
+        if (sameCount > 1) {
+            val nth = rows.take(index + 1).count { it.platform == row.platform }
+            row.platform + ('①' + (nth - 1))
+        } else {
+            row.platform
+        }
+    }
+
+    val profiles = rows.mapIndexedNotNull { index, row ->
+        if (!row.filled) {
             null
         } else {
             SelfProfile(
-                platform = platforms[i],
-                nickname = nick[i].trim(),
-                bio = bio[i].trim(),
-                // 勾了「头像是同一张图」就喂同一个哈希，引擎会算成汉明距离 0
-                avatarHash = if (sameAvatar[i]) 0L else null,
-                searchable = searchable[i]
+                platform = labels[index],
+                nickname = row.nickname.trim(),
+                bio = row.bio.trim(),
+                // 勾了「头像和其他号是同一张」就喂同一个哈希，引擎会算成汉明距离 0
+                avatarHash = if (row.sameAvatar) 0L else null,
+                searchable = row.searchable
             )
         }
     }
@@ -90,10 +118,10 @@ fun ExposureAuditScreen(
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
-                title = { Text("曝光审计") }
+                title = { Text("关联度评估") }
             )
         }
     ) { innerPadding ->
@@ -104,30 +132,41 @@ fun ExposureAuditScreen(
             contentPadding = PaddingValues(
                 start = Spacing.pageHorizontal,
                 end = Spacing.pageHorizontal,
+                top = Spacing.gridGap,
                 bottom = Spacing.sectionGap
             ),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sectionGap)
+            verticalArrangement = Arrangement.spacedBy(Spacing.gridGap)
         ) {
             item {
                 Text(
-                    text = "填你自己在各平台的公开资料。分数表示别人把这些号认成同一个人的难易程度，越高越容易。",
+                    text = "填目标在各平台公开可见的资料。分数越高，这些号越能被认定为同一个人。" +
+                        "同一平台有两个号就再加一行 —— 小号和大号往往是最容易并上的。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.textMuted
                 )
             }
 
-            items(platforms.size) { i ->
-                AuditInputCard(
-                    platform = platforms[i],
-                    nickname = nick[i],
-                    onNickname = { nick[i] = it },
-                    bio = bio[i],
-                    onBio = { bio[i] = it },
-                    searchable = searchable[i],
-                    onSearchable = { searchable[i] = it },
-                    sameAvatar = sameAvatar[i],
-                    onSameAvatar = { sameAvatar[i] = it }
+            items(rows.size) { index ->
+                AccountInputCard(
+                    row = rows[index],
+                    label = labels[index],
+                    canDelete = rows.size > 1,
+                    onDelete = { rows.removeAt(index) }
                 )
+            }
+
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { rows.add(AuditRow("微信")) }) {
+                        Text("＋ 再加一个号")
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "已填 ${profiles.size} 个",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.textMuted
+                    )
+                }
             }
 
             if (pairs.isNotEmpty()) {
@@ -141,14 +180,14 @@ fun ExposureAuditScreen(
                     ) {
                         Column(modifier = Modifier.padding(Spacing.cardPadding)) {
                             Text(
-                                text = "关联图（自查版）",
+                                text = "关联图",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 letterSpacing = 1.sp
                             )
                             Spacer(Modifier.height(Spacing.tinyGap))
                             Text(
-                                text = "线越粗关联越强；红色 = 强关联（≥30 分）",
+                                text = "线越粗关联越强；单对号之间 ≥30 分就该交叉验证后再并号",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.textMuted
                             )
@@ -185,7 +224,7 @@ fun ExposureAuditScreen(
 
             item {
                 Text(
-                    text = "数据只在本页内存里计算，关闭页面即丢；不写磁盘、不上传。",
+                    text = "本页只在内存里计算，不进数据本；要留证请把结论登记到数据本。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.textMuted
                 )
@@ -195,16 +234,11 @@ fun ExposureAuditScreen(
 }
 
 @Composable
-private fun AuditInputCard(
-    platform: String,
-    nickname: String,
-    onNickname: (String) -> Unit,
-    bio: String,
-    onBio: (String) -> Unit,
-    searchable: Boolean,
-    onSearchable: (Boolean) -> Unit,
-    sameAvatar: Boolean,
-    onSameAvatar: (Boolean) -> Unit
+private fun AccountInputCard(
+    row: AuditRow,
+    label: String,
+    canDelete: Boolean,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -212,40 +246,69 @@ private fun AuditInputCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(Spacing.cardPadding)) {
-            Text(
-                text = platform,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                letterSpacing = 1.sp
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = 1.sp
+                )
+                Spacer(Modifier.weight(1f))
+                if (canDelete) {
+                    TextButton(onClick = onDelete) {
+                        Text("移掉", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+            Spacer(Modifier.height(Spacing.tinyGap))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PLATFORMS.forEach { name ->
+                    TextButton(onClick = { row.platform = name }) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (row.platform == name) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.textMuted
+                            }
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(Spacing.itemGap))
             OutlinedTextField(
-                value = nickname,
-                onValueChange = onNickname,
-                label = { Text("昵称") },
+                value = row.nickname,
+                onValueChange = { row.nickname = it },
+                label = { Text("昵称 / 号名") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(Spacing.itemGap))
             OutlinedTextField(
-                value = bio,
-                onValueChange = onBio,
+                value = row.bio,
+                onValueChange = { row.bio = it },
                 label = { Text("简介（可不填）") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(Spacing.gridGap))
             ToggleRow(
-                title = "这个主页能被搜到",
+                title = "这个号能被搜到",
                 summary = "站内搜索或搜索引擎直接命中",
-                checked = searchable,
-                onCheckedChange = onSearchable
+                checked = row.searchable,
+                onCheckedChange = { row.searchable = it }
             )
             ToggleRow(
-                title = "头像和其他平台是同一张",
+                title = "头像和其他号是同一张",
                 summary = "复用同一张图最容易被串起来",
-                checked = sameAvatar,
-                onCheckedChange = onSameAvatar
+                checked = row.sameAvatar,
+                onCheckedChange = { row.sameAvatar = it }
             )
         }
     }
@@ -338,7 +401,7 @@ private fun ReportCard(
 
                 Spacer(Modifier.height(Spacing.sectionGap))
                 Text(
-                    text = "收敛建议",
+                    text = "下一步动作",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     letterSpacing = 1.sp
@@ -366,7 +429,7 @@ private fun ReportCard(
                 TextButton(onClick = {
                     // 结果给人看/给对象自己看，走系统剪贴板，不落盘不外传
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.setPrimaryClip(ClipData.newPlainText("曝光审计", reportText(report)))
+                    cm.setPrimaryClip(ClipData.newPlainText("关联度评估", reportText(report)))
                 }) {
                     Text("复制报告", style = MaterialTheme.typography.labelSmall)
                 }
@@ -378,14 +441,14 @@ private fun ReportCard(
 /** 纯文本报告，用于复制给别处；不含任何输入原文之外的信息。 */
 private fun reportText(report: LinkabilityReport): String {
     val sb = StringBuilder()
-    sb.append("SJ Lens 曝光审计\n")
+    sb.append("SJ Lens 关联度评估\n")
     sb.append("关联度 ${report.score}/100（${report.level.text}）\n")
     if (report.factors.isEmpty()) {
         sb.append("未命中显著关联特征\n")
     } else {
         report.factors.forEach { sb.append("· ${it.label} +${it.weight}｜${it.detail}\n") }
     }
-    sb.append("收敛建议：\n")
+    sb.append("下一步动作：\n")
     report.actions.forEach { sb.append("→ $it\n") }
     return sb.toString()
 }

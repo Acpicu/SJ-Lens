@@ -1,10 +1,10 @@
 package com.sj.followclip.data.osint
 
 /**
- * 自身曝光面自审引擎。
+ * 跨平台关联度评估引擎。
  *
- * 输入：本机主人自己在各平台的公开资料快照（昵称、简介、头像哈希、是否可被搜到）。
- * 输出：这些资料有多容易被串成同一个人，以及该改什么。
+ * 输入：一个目标在各平台**公开可见**的资料（昵称、简介、头像哈希、能否被搜到）。
+ * 输出：这些号被认定为同一个人的把握有多大，以及下一步该去取什么证。
  *
  * 本文件是纯 Kotlin，不 import android.*，可以直接在 JVM 单测里跑。
  */
@@ -161,26 +161,26 @@ object ExposureAudit {
             else -> RiskLevel.HIGH
         }
 
-        // ---------- 5. 收敛建议 ----------
+        // ---------- 5. 下一步取证动作 ----------
         val actions = mutableListOf<String>()
         if (nickW >= W_NICK_SAME) {
-            actions += "各平台改用互不相同的昵称，至少不要互为截断关系"
+            actions += "昵称完全一致：截图归档并按 A 级处理，这一条足以支撑「同一人」的结论"
         } else if (nickW > 0) {
-            actions += "拉开昵称差异：去掉共同前缀/后缀，避免一字之差"
+            actions += "昵称只差一层（包含或一字之差）：换平台再搜同款昵称，看有没有第三、第四个号"
         }
         if (avatarW >= W_AVATAR_SAME) {
-            actions += "换掉复用头像，一张图只在一个平台用"
+            actions += "同一张头像：存原图并算 dHash，这张图还能拿去别的平台反查"
         } else if (avatarW > 0) {
-            actions += "给头像加平台专属裁切或水印，破坏感知哈希"
+            actions += "头像近似：按图搜图再确认一次，别急着并号"
         }
         if (bioHits.isNotEmpty()) {
-            actions += "删掉简介里的学校 / 公司 / 城市 / 生日等可检索词"
+            actions += "简介共用的词单独登记，逐词去搜——学校 / 公司 / 城市通常就藏在这些词里"
         }
         if (searchableCount > 0) {
-            actions += "在平台隐私设置里关闭「允许通过手机号 / 通讯录找到我」"
+            actions += "已确认可被搜索引擎命中：把命中页 URL 记进数据本，作为交叉验证的一环"
         }
         if (actions.isEmpty()) {
-            actions += "当前样本未发现显著关联特征；补更多平台资料后可重算"
+            actions += "样本不足：先补齐目标在各平台的昵称与简介，再回来算"
         }
 
         return LinkabilityReport(score, level, factors, actions)
@@ -256,25 +256,6 @@ object ExposureAudit {
             }
         }
         return out
-    }
-
-    /**
-     * 由 9×8 灰度采样算 dHash（64 位）：每行比较相邻像素，左 > 右 记 1。
-     *
-     * @param samples 行优先的灰度值，长度 >= width * height
-     */
-    fun dHashFromLuma(samples: IntArray, width: Int = 9, height: Int = 8): Long {
-        require(width >= 2 && height >= 1) { "宽至少 2、高至少 1" }
-        require(samples.size >= width * height) { "采样数组长度不足" }
-        var hash = 0L
-        for (y in 0 until height) {
-            for (x in 0 until width - 1) {
-                val left = samples[y * width + x]
-                val right = samples[y * width + x + 1]
-                hash = (hash shl 1) or (if (left > right) 1L else 0L)
-            }
-        }
-        return hash
     }
 
     /** 小写化并只保留字母与数字，消除空格、下划线、全角标点的干扰。 */

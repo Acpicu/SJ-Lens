@@ -47,18 +47,11 @@ import com.sj.followclip.ui.detail.PersonDetailScreen
 import com.sj.followclip.ui.detail.BiliLoginScreen
 import com.sj.followclip.ui.detail.PlatformVideosScreen
 import com.sj.followclip.ui.detail.PlatformWebView
-import com.sj.followclip.ui.evidence.EvidenceScreen
-import com.sj.followclip.ui.evidence.ReportScreen
-import com.sj.followclip.ui.guide.AnalysisGuideScreen
-import com.sj.followclip.ui.guide.GuideScreen
-import com.sj.followclip.ui.guide.UsageGuideDialog
-import com.sj.followclip.ui.guide.markUsageGuideShown
-import com.sj.followclip.ui.guide.shouldShowUsageGuide
 import com.sj.followclip.ui.home.HomeScreen
-import com.sj.followclip.ui.manual.FieldManualScreen
-import com.sj.followclip.ui.notes.NotesScreen
+import com.sj.followclip.ui.ledger.LedgerOverviewScreen
+import com.sj.followclip.ui.ledger.LedgerReportScreen
+import com.sj.followclip.ui.ledger.LedgerScreen
 import com.sj.followclip.ui.osint.ExposureAuditScreen
-import com.sj.followclip.ui.record.DataRecordScreen
 import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.settings.SettingsScreen
 import com.sj.followclip.ui.state.AppUiState
@@ -71,6 +64,7 @@ import com.sj.followclip.util.AvatarStore
  * 结构按「文件夹」来：
  * 首页（文件夹列表）→ 文件夹内（这个人的各平台账号）→ 平台作品页。
  * 新建文件夹在首页的加号；往文件夹里加平台账号，在文件夹内的加号。
+ * 数据本（情报记录）按目标走：目标页 → 数据本 → 报告预览。
  */
 object Routes {
     const val HOME = "home"
@@ -79,10 +73,9 @@ object Routes {
     const val CREATE_FOLDER = "createFolder"
     const val BILI_LOGIN = "biliLogin"
     const val EXPOSURE_AUDIT = "exposureAudit"
-    const val FIELD_MANUAL = "fieldManual"
-    const val GUIDE = "guide"
-    const val RECORD = "record"
-    const val ANALYSIS = "analysis"
+
+    /** 数据本 · 全部目标（从设置页 OSINT 区进） */
+    const val LEDGER_ALL = "ledgerAll"
 
     const val ARG_PERSON_ID = "personId"
     const val ARG_PLATFORM = "platform"
@@ -91,17 +84,14 @@ object Routes {
     const val PERSON = "person/{$ARG_PERSON_ID}"
     const val ADD_ACCOUNT = "person/{$ARG_PERSON_ID}/addAccount"
     const val PLATFORM_VIDEOS = "person/{$ARG_PERSON_ID}/account/{$ARG_ACCOUNT_ID}"
-    const val PERSON_EVIDENCE = "person/{$ARG_PERSON_ID}/evidence"
-    const val PERSON_REPORT = "person/{$ARG_PERSON_ID}/report"
-    const val PERSON_NOTES = "person/{$ARG_PERSON_ID}/notes"
+    const val PERSON_LEDGER = "person/{$ARG_PERSON_ID}/ledger"
+    const val PERSON_REPORT = "person/{$ARG_PERSON_ID}/ledgerReport"
 
     fun person(personId: Long): String = "person/$personId"
 
-    fun evidence(personId: Long): String = "person/$personId/evidence"
+    fun ledger(personId: Long): String = "person/$personId/ledger"
 
-    fun report(personId: Long): String = "person/$personId/report"
-
-    fun notes(personId: Long): String = "person/$personId/notes"
+    fun report(personId: Long): String = "person/$personId/ledgerReport"
 
     fun addAccount(personId: Long): String = "person/$personId/addAccount"
 
@@ -142,22 +132,6 @@ fun AppNavigation() {
     var showBatteryGuide by remember { mutableStateOf(shouldShowBatteryGuide(context)) }
     if (showBatteryGuide) {
         BatteryGuideDialog(onDismiss = { showBatteryGuide = false })
-    }
-
-    // 首次启动弹一次「怎么用」（只弹一次；设置里随时能重开）
-    var showUsageGuide by remember { mutableStateOf(shouldShowUsageGuide(context)) }
-    if (showUsageGuide) {
-        UsageGuideDialog(
-            onDismiss = {
-                markUsageGuideShown(context)
-                showUsageGuide = false
-            },
-            onOpenGuide = {
-                markUsageGuideShown(context)
-                showUsageGuide = false
-                navController.navigate(Routes.GUIDE)
-            }
-        )
     }
 
     // 自动检查排期：进应用排一次即可，KEEP 策略不会重置已有计时
@@ -250,27 +224,20 @@ fun AppNavigation() {
                 SettingsScreen(
                     onLoginBili = { navController.navigate(Routes.BILI_LOGIN) },
                     onOpenAudit = { navController.navigate(Routes.EXPOSURE_AUDIT) },
-                    onOpenManual = { navController.navigate(Routes.FIELD_MANUAL) },
-                    onOpenGuide = { navController.navigate(Routes.GUIDE) },
-                    onOpenRecord = { navController.navigate(Routes.RECORD) },
-                    onOpenAnalysis = { navController.navigate(Routes.ANALYSIS) },
+                    onOpenLedger = { navController.navigate(Routes.LEDGER_ALL) }
                 )
             }
 
-            composable(Routes.ANALYSIS) {
-                AnalysisGuideScreen(onBack = { navController.popBackStackSafely() })
-            }
-
-            composable(Routes.RECORD) {
-                DataRecordScreen(onBack = { navController.popBackStackSafely() })
-            }
-
-            composable(Routes.GUIDE) {
-                GuideScreen(onBack = { navController.popBackStackSafely() })
-            }
-
-            composable(Routes.FIELD_MANUAL) {
-                FieldManualScreen(onBack = { navController.popBackStackSafely() })
+            composable(Routes.LEDGER_ALL) {
+                LedgerOverviewScreen(
+                    personNames = AppUiState.persons.associate {
+                        it.id to it.remarkName
+                    },
+                    onBack = { navController.popBackStackSafely() },
+                    onOpenTarget = { personId ->
+                        navController.navigate(Routes.ledger(personId))
+                    }
+                )
             }
 
             composable(Routes.EXPOSURE_AUDIT) {
@@ -307,37 +274,22 @@ fun AppNavigation() {
                     onDeleteAccount = { accountId ->
                         AppUiState.removeAccount(personId, accountId)
                     },
-                    onOpenEvidence = { id -> navController.navigate(Routes.evidence(id)) },
-                    onOpenNotes = { id -> navController.navigate(Routes.notes(id)) }
+                    onOpenLedger = { id -> navController.navigate(Routes.ledger(id)) }
                 )
             }
 
             composable(
-                route = Routes.PERSON_NOTES,
+                route = Routes.PERSON_LEDGER,
                 arguments = listOf(
                     navArgument(Routes.ARG_PERSON_ID) { type = NavType.LongType }
                 )
             ) { entry ->
                 val personId = entry.arguments?.getLong(Routes.ARG_PERSON_ID) ?: 0L
-                NotesScreen(
-                    personId = personId,
-                    personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
-                    onBack = { navController.popBackStackSafely() }
-                )
-            }
-
-            composable(
-                route = Routes.PERSON_EVIDENCE,
-                arguments = listOf(
-                    navArgument(Routes.ARG_PERSON_ID) { type = NavType.LongType }
-                )
-            ) { entry ->
-                val personId = entry.arguments?.getLong(Routes.ARG_PERSON_ID) ?: 0L
-                EvidenceScreen(
+                LedgerScreen(
                     personId = personId,
                     personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
                     onBack = { navController.popBackStackSafely() },
-                    onPreview = { navController.navigate(Routes.report(personId)) }
+                    onOpenReport = { navController.navigate(Routes.report(personId)) }
                 )
             }
 
@@ -348,7 +300,7 @@ fun AppNavigation() {
                 )
             ) { entry ->
                 val personId = entry.arguments?.getLong(Routes.ARG_PERSON_ID) ?: 0L
-                ReportScreen(
+                LedgerReportScreen(
                     personId = personId,
                     personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
                     onBack = { navController.popBackStackSafely() }

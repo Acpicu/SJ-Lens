@@ -3,7 +3,8 @@ package com.sj.followclip.data.work
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.sj.followclip.data.source.bili.BiliChecker
+import com.sj.followclip.data.local.PendingStore
+import com.sj.followclip.data.check.CheckRunner
 import com.sj.followclip.ui.state.AppUiState
 import com.sj.followclip.util.Notifications
 
@@ -27,12 +28,28 @@ class CheckWorker(
         val persons = AppUiState.persons.toList()
         if (persons.isEmpty()) return Result.success()
 
-        val biliResult = BiliChecker.checkAll(applicationContext, persons) { _, _ -> }
-        biliResult.onSuccess { results ->
-            val added = results.sumOf { it.newCount }
-            if (added > 0) {
-                Notifications.notifyNewContent(applicationContext, added)
-            }
+        Notifications.startChecking(applicationContext, persons.sumOf { it.accounts.size }.coerceAtLeast(1))
+
+        val outcome = CheckRunner.run(
+            context = applicationContext,
+            persons = persons,
+            activity = null,          // 后台没有窗口：快手会如实跳过，B站/抖音照常查
+            includeWeb = true
+        ) { done, total, label ->
+            Notifications.updateChecking(applicationContext, done, total, label)
+        }
+
+        // 后台这一轮同样把结果写进「最近检查」，否则用户回到应用看到的是空的
+        if (outcome.error == null) {
+            PendingStore.replaceAll(applicationContext, outcome.items.sortedByDescending { it.foundAt })
+        }
+        outcome.results.forEach { r ->
+            AppUiState.setUnread(r.personId, r.accountId, r.newCount)
+        }
+        Notifications.stopChecking(applicationContext)
+        val added = outcome.results.sumOf { it.newCount }
+        if (added > 0) {
+            Notifications.notifyNewContent(applicationContext, added)
         }
 
         // 定期提醒：抖音/快手网页看不到「日常」，只能按用户设定的间隔催他去看一眼
@@ -51,12 +68,7 @@ class CheckWorker(
             Notifications.notifyReminder(applicationContext, dueNames)
         }
 
-        return biliResult.fold(
-            onSuccess = { Result.success() },
-            onFailure = {
-                // 限流或网络问题：交给系统退避重试，不立即再打接口
-                Result.retry()
-            }
-        )
+        // 限流或网络问题：交给系统退避重试，不立即再打接口
+        return if (outcome.error != null) Result.retry() else Result.success()
     }
 }

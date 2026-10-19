@@ -32,8 +32,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sj.followclip.data.source.bili.BiliChecker
-import com.sj.followclip.data.source.web.WebViewChecker
+import com.sj.followclip.data.check.CheckController
+import com.sj.followclip.data.local.PendingStore
+import com.sj.followclip.data.source.bili.AccountCheckResult
 import com.sj.followclip.domain.model.Platform
 import com.sj.followclip.domain.model.Person
 import com.sj.followclip.ui.common.TechProgressBar
@@ -42,6 +43,7 @@ import com.sj.followclip.ui.state.AppUiState
 import com.sj.followclip.ui.theme.SJFollowClipTheme
 import com.sj.followclip.ui.theme.Spacing
 import com.sj.followclip.ui.theme.textMuted
+import com.sj.followclip.util.Notifications
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -67,79 +69,27 @@ fun HomeScreen(
     var actionTarget by remember { mutableStateOf<Person?>(null) }
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var checking by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf("") }
-    var progress by remember { mutableStateOf(0f) }
+
+    // 检查状态全部来自 CheckController（应用级单例）：
+    // 切到别的页面、甚至退到后台，这一轮都会自己跑完。
+    val checking = CheckController.running
+    val status = CheckController.statusLine
+    val progress = CheckController.progress
+    val showResultDialog = CheckController.showDetail
+    val lastResults = CheckController.lastResults
+    val lastError = CheckController.lastError
+    val lastWasManual = CheckController.wasManual()
 
     // 管理模式下拦截系统返回：手势返回或返回键都先退出管理模式
     BackHandler(enabled = manageMode) { manageMode = false }
 
-    /**
-     * 执行一次检查。
-     *
-     * includeWeb = false 时只查 B站（快，进应用时自动跑）；
-     * 手动点「检查」才连抖音/快手一起过 —— 那两个要等网页渲染，慢得多。
-     */
+    /** 点一下检查：真正的执行体在 CheckController 里，界面不需要自己持协程。 */
     fun performCheck(includeWeb: Boolean) {
-        if (checking) return
-
-        // 先把本轮要做的事算清楚，进度条才知道总进度
-        val webJobs = if (includeWeb) {
-            persons.flatMap { person ->
-                person.accounts
-                    .filter { it.platform != Platform.BILI && it.homepageUrl.isNotBlank() }
-                    .map { person.id to it }
-            }
-        } else {
-            emptyList()
-        }
-        // 两个阶段：1) B站  2) 抖音/快手。没有第二类账号时只算一个阶段
-        val phaseCount = if (webJobs.isEmpty()) 1 else 2
-
-        scope.launch {
-            checking = true
-            progress = 0f
-            status = "检查中…"
-            var added = 0
-
-            BiliChecker.checkAll(context, persons) { done, total ->
-                val safeTotal = total.coerceAtLeast(1)
-                status = "B站 $done/$safeTotal"
-                progress = (done.toFloat() / safeTotal) / phaseCount
-            }.onSuccess { results ->
-                results.forEach { r ->
-                    AppUiState.setUnread(r.personId, r.accountId, r.newCount)
-                }
-                added += results.sumOf { it.newCount }
-            }.onFailure {
-                status = it.message ?: "B站检查失败"
-            }
-
-            val activity = context as? Activity
-            if (webJobs.isNotEmpty() && activity != null) {
-                progress = 1f / phaseCount
-                WebViewChecker.checkAll(activity, webJobs) { done, total ->
-                    val safeTotal = total.coerceAtLeast(1)
-                    status = "抖音/快手 $done/$safeTotal"
-                    progress = (1f + done.toFloat() / safeTotal) / phaseCount
-                }.forEach { r ->
-                    AppUiState.setUnread(r.personId, r.accountId, r.newCount)
-                    added += r.newCount
-                }
-            }
-
-            status = if (added > 0) "本次新增 $added 条" else "没有新更新"
-            checking = false
-            progress = 0f
-            // 结果只停留 3 秒，随后让位给 OSINT
-            delay(3000)
-            status = ""
-        }
+        CheckController.start(context, persons, includeWeb)
     }
 
     // 进应用自动查一轮，三类都覆盖。
-    // 抖音/快手的抓取用透明全屏 WebView 完成，不会和用户看到的界面冲突。
+    // 抖音走纯 HTTP（后台也能查），快手需要真实渲染的 WebView（仅前台）。
     // 只在「本次启动」第一次进首页时跑：从其它页面返回不该再查一遍。
     LaunchedEffect(Unit) {
         if (!AutoCheckGate.done && persons.isNotEmpty()) {
@@ -259,8 +209,7 @@ fun HomeScreen(
 
     // 删除确认
     val target = pendingDelete
-    if (target != null) {
-        AlertDialog(
+    if (target != null) {        AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("删除这个文件夹？") },
             text = {
@@ -283,6 +232,65 @@ fun HomeScreen(
                 TextButton(onClick = { pendingDelete = null }) {
                     Text("取消")
                 }
+            }
+        )
+    }
+
+    // 手动检查后的逐账号明细
+    if (showResultDialog) {
+        AlertDialog(
+            onDismissRequest = { CheckController.showDetail = false },
+            title = { Text("检查结果") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    val err = lastError
+                    if (err != null) {
+                        Text(
+                            text = "中断：$err",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(Spacing.itemGap))
+                    }
+                    if (lastResults.isEmpty()) {
+                        Text(
+                            text = "这一轮没有可查的账号（先在文件夹里加平台主页）。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.textMuted
+                        )
+                    }
+                    lastResults.forEach { r ->
+                        Text(
+                            text = "${r.accountLabel} · ${r.platform.displayName}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = buildString {
+                                append("抓取 ").append(r.fetched).append(" 条")
+                                when {
+                                    r.note.isNotBlank() -> append(" · ").append(r.note)
+                                    r.baseline -> append(" · 首次检查已建基线，下次起才报新增")
+                                    r.newCount > 0 -> append(" · 新增 ").append(r.newCount).append(" 条")
+                                    else -> append(" · 都是见过的，确实没有新增")
+                                }
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.textMuted
+                        )
+                        Spacer(Modifier.height(Spacing.itemGap))
+                    }
+                    if (!lastWasManual) {
+                        Text(
+                            text = "这一轮只查了 B站；抖音/快手要手动点「检查」。",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.textMuted
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { CheckController.showDetail = false }) { Text("知道了") }
             }
         )
     }
@@ -411,7 +419,7 @@ private fun HomeScreenEmptyPreview() {
 }
 
 
-/** ���̼���ǣ����������Ƿ����Զ����һ�֣����������ҳ�淵��ʱ������顣 */
+/** 进程级标记：本次启动是否已自动查过一轮，避免从其它页面返回时反复检查。 */
 private object AutoCheckGate {
     var done = false
 }

@@ -130,7 +130,8 @@ fun PlatformVideosScreen(
                         list.filter { it.bvid !in known }.map { it.bvid }.toSet()
                     }
                     newIds = fresh
-                    VideoSnapshotStore.save(context, accountId, list.map { it.bvid }.take(60))
+                    // 合并而不是覆盖：首页只给 30 条，被挤出去的老作品不该下次又被当成新的
+                    VideoSnapshotStore.merge(context, accountId, list.map { it.bvid })
                     // 把新增数写回数据层，首页卡片角标会跟着亮
                     if (personId > 0L && accountId > 0L) {
                         AppUiState.setUnread(personId, accountId, fresh.size)
@@ -158,7 +159,7 @@ fun PlatformVideosScreen(
                         list.filter { it.id !in known }
                     }
                     newDynCount = fresh.size
-                    VideoSnapshotStore.save(context, accountId, list.map { it.id }.take(60), "dyn")
+                    VideoSnapshotStore.merge(context, accountId, list.map { it.id }, "dyn")
                     // 「最近检查」页统一由检查流程写入，这里只负责本页计数，
                     // 否则单独刷一个账号会把整轮的汇总结果冲掉。
                 }

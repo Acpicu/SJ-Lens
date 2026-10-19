@@ -55,10 +55,7 @@ import com.sj.followclip.util.WebCookies
 fun SettingsScreen(
     onLoginBili: () -> Unit,
     onOpenAudit: () -> Unit,
-    onOpenManual: () -> Unit,
-    onOpenGuide: () -> Unit,
-    onOpenRecord: () -> Unit,
-    onOpenAnalysis: () -> Unit,
+    onOpenLedger: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -82,7 +79,7 @@ fun SettingsScreen(
         if (uri != null) {
             runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
-                    stream.write(AppUiState.exportJson().toByteArray())
+                    stream.write(AppUiState.exportJson(context).toByteArray())
                 }
             }
         }
@@ -148,14 +145,14 @@ fun SettingsScreen(
                 SettingCard {
                     ActionRow(
                         title = "导出数据",
-                        summary = "把全部文件夹和博主信息存成 JSON 文件，换手机时用",
+                        summary = "目标、平台账号与数据本记录存成一个 JSON，换机或交接时用",
                         action = "导出",
                         onAction = { exportLauncher.launch("sjlens-backup.json") }
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
                         title = "导入数据",
-                        summary = "从备份文件恢复；会覆盖当前全部文件夹",
+                        summary = "从备份文件恢复；会覆盖当前全部目标与数据本",
                         action = "导入",
                         onAction = { importLauncher.launch(arrayOf("application/json", "*/*")) }
                     )
@@ -177,7 +174,7 @@ fun SettingsScreen(
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
                         title = "清除全部本地数据",
-                        summary = "文件夹、账号、待确认、抓取记录全部删除，不可恢复",
+                        summary = "目标、账号、数据本、抓取记录全部删除，不可恢复",
                         action = "清除",
                         danger = true,
                         onAction = { confirmClearAll = true }
@@ -190,38 +187,17 @@ fun SettingsScreen(
 
                 SettingCard {
                     ActionRow(
-                        title = "怎么用",
-                        summary = "9 步操作路径，按顺序做一遍就会；每步都写清点哪里",
+                        title = "数据本 · 全部目标",
+                        summary = "所有目标的记录汇总：计数、冲突、缺口，可跨目标搜索并一键导出",
                         action = "打开",
-                        onAction = onOpenGuide
+                        onAction = onOpenLedger
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
-                        title = "记录了什么",
-                        summary = "一条新作品记下哪些字段、能推出什么、数据存在哪、怎么删",
-                        action = "查看",
-                        onAction = onOpenRecord
-                    )
-                    Spacer(Modifier.height(Spacing.gridGap))
-                    ActionRow(
-                        title = "怎么分析",
-                        summary = "四份数据各管什么、能得出什么结论、可信度、速记与证据怎么衔接",
-                        action = "查看",
-                        onAction = onOpenAnalysis
-                    )
-                    Spacer(Modifier.height(Spacing.gridGap))
-                    ActionRow(
-                        title = "自身曝光审计",
-                        summary = "填自己在各平台的公开资料，算出别人把这些号串成同一个人的难度",
+                        title = "关联度评估",
+                        summary = "填一个目标在各平台的公开资料，算「这几个号能不能被认定成同一个人」",
                         action = "打开",
                         onAction = onOpenAudit
-                    )
-                    Spacer(Modifier.height(Spacing.gridGap))
-                    ActionRow(
-                        title = "现场手册",
-                        summary = "证据链、信源分级、交叉验证、常见误判、操作安全与边界，离线内置",
-                        action = "查看",
-                        onAction = onOpenManual
                     )
                 }
             }
@@ -279,12 +255,12 @@ fun SettingsScreen(
 
                     Spacer(Modifier.height(Spacing.gridGap))
 
-                    // 皮卡丘：手绘图形 + 英文名
+                    // 闪电标识：纯矢量折线，任何尺寸都清晰
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        PikachuMark(size = 36.dp)
+                        BoltMarkGlow(size = 34.dp)
                         Spacer(Modifier.width(Spacing.gridGap))
                         Text(
-                            text = "Pikachu",
+                            text = "Volt",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             letterSpacing = 1.sp
@@ -295,7 +271,7 @@ fun SettingsScreen(
 
                     ActionRow(
                         title = "SJ Lens",
-                        summary = "关注动态聚合 · 数据只存本机，不上传任何服务器"
+                        summary = "红队情报工具 · 目标线索、数据本与交档简报，数据只存本机"
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
@@ -330,7 +306,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { confirmClearAll = false },
             title = { Text("清除全部数据？") },
-            text = { Text("所有文件夹、账号、待确认内容和抓取记录都会被删除，无法恢复。") },
+            text = { Text("所有目标、平台账号、数据本记录、待确认内容和抓取记录都会被删除，无法恢复。") },
             confirmButton = {
                 TextButton(onClick = {
                     AppUiState.clearAllData(context)
@@ -468,10 +444,7 @@ private fun SettingsScreenPreview() {
         SettingsScreen(
             onLoginBili = {},
             onOpenAudit = {},
-            onOpenManual = {},
-            onOpenGuide = {},
-            onOpenRecord = {},
-            onOpenAnalysis = {}
+            onOpenLedger = {}
         )
     }
 }

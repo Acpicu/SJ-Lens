@@ -48,8 +48,8 @@ import com.sj.followclip.util.relativeTime
  * 每次检查**整体覆盖**，不需要手动确认或清理 —— 打开看到的永远是
  * 「这一次检查发现了什么」，不会越堆越多。
  *
- * 数据只来自 B站（投稿 + 动态）：抖音/快手 没有条目级数据，不参与这个列表，
- * 它们的更新体现在卡片角标上。
+ * 条目来自一整轮检查：B站 的投稿与动态，加上抖音/快手 页面里抽到的作品卡片。
+ * 抓不到内容的账号不会假装「没有更新」，原因写在检查结果弹窗里。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,7 +166,24 @@ private fun ResultRow(item: PendingItem, onClick: () -> Unit) {
             )
             Spacer(Modifier.height(Spacing.tinyGap))
             Text(
-                text = if (item.kind == "DYNAMIC") "动态" else "投稿",
+                text = buildString {
+                    append(
+                        when (item.platform) {
+                            "BILI" -> "B站"
+                            "DOUYIN" -> "抖音"
+                            "KUAISHOU" -> "快手"
+                            else -> item.platform
+                        }
+                    )
+                    append(" · ")
+                    append(
+                        when (item.kind) {
+                            "DYNAMIC" -> "动态"
+                            "PROFILE" -> "主页变化"
+                            else -> "作品"
+                        }
+                    )
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.textMuted
             )
@@ -174,24 +191,35 @@ private fun ResultRow(item: PendingItem, onClick: () -> Unit) {
     }
 }
 
-/** 打开内容：投稿走视频深链，动态走 t.bilibili.com。 */
+/**
+ * 打开内容：优先用检查时记下的地址（抖音/快手作品的真实链接），
+ * B站 投稿走 App 深链、动态走 t.bilibili.com。
+ */
 private fun openContent(context: Context, item: PendingItem) {
-    val isDynamic = item.kind == "DYNAMIC"
-    val primary = if (isDynamic) {
-        "https://t.bilibili.com/${item.bvid}"
-    } else {
-        "bilibili://video/${item.bvid}"
+    val candidates = buildList {
+        if (item.link.isNotBlank()) add(item.link)
+        when {
+            item.kind == "DYNAMIC" -> {
+                add("https://t.bilibili.com/${item.bvid}")
+            }
+            item.platform == "BILI" -> {
+                add("bilibili://video/${item.bvid}")
+                add("https://www.bilibili.com/video/${item.bvid}")
+            }
+            item.platform == "DOUYIN" -> {
+                add("snssdk1128://aweme/detail/${item.bvid}")
+                add("https://www.douyin.com/video/${item.bvid}")
+            }
+            item.platform == "KUAISHOU" -> {
+                add("kwai://work/${item.bvid}")
+                add("https://www.kuaishou.com/short-video/${item.bvid}")
+            }
+        }
     }
-    val fallback = if (isDynamic) {
-        "https://t.bilibili.com/${item.bvid}"
-    } else {
-        "https://www.bilibili.com/video/${item.bvid}"
-    }
-
-    val opened = runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(primary)))
-    }.isSuccess
-    if (!opened) {
-        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(fallback))) }
+    candidates.forEach { target ->
+        val opened = runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+        }.isSuccess
+        if (opened) return
     }
 }

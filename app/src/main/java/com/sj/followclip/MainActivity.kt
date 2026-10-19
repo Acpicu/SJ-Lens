@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.sj.followclip.ui.AppNavigation
 import com.sj.followclip.ui.theme.SJFollowClipTheme
+import com.sj.followclip.util.CurrentActivity
 
 /**
  * 应用唯一 Activity（规格第三章：单 Activity + Navigation Compose）。
@@ -22,6 +23,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // 检查协程跑在应用级作用域里，需要能拿到当前前台 Activity：
+        // 快手只能靠真实 WebView 抓，而 WebView 必须挂在窗口上。
+        CurrentActivity.register(application)
         setContent {
             SJFollowClipTheme {
                 Surface(

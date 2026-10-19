@@ -3,7 +3,9 @@ package com.sj.followclip.ui.state
 import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import com.sj.followclip.data.local.JsonStore
+import com.sj.followclip.data.local.LedgerStore
 import com.sj.followclip.data.local.PendingStore
+import com.sj.followclip.data.local.WebProfileStore
 import com.sj.followclip.data.source.bili.BiliSource
 import com.sj.followclip.domain.model.Account
 import com.sj.followclip.domain.model.Person
@@ -32,14 +34,17 @@ object AppUiState {
 
         // 首次启动就是空的，由用户自己建文件夹；
         // 假数据只留在 @Preview 里，绝不进真实运行环境。
-        val loaded = JsonStore.load(context)
-        if (loaded != null && loaded.isNotEmpty()) {
-            persons.addAll(loaded)
+        val backup = JsonStore.loadBackup(context)
+        if (backup != null && backup.persons.isNotEmpty()) {
+            persons.addAll(backup.persons)
+            if (backup.ledger.isNotEmpty()) LedgerStore.replaceAll(context, backup.ledger)
         }
     }
 
     private fun persist() {
-        appContext?.let { ctx -> JsonStore.save(ctx, persons.toList()) }
+        appContext?.let { ctx ->
+            JsonStore.save(ctx, persons.toList(), LedgerStore.all(ctx))
+        }
     }
 
     fun addPerson(remarkName: String): Person {
@@ -84,36 +89,48 @@ object AppUiState {
         persist()
     }
 
-    /** 导出成 JSON 文本，供用户自己保存备份。 */
-    fun exportJson(): String = JsonStore.encode(persons)
+    /** 导出成 JSON 文本，供用户自己保存备份。数据本记录一起带走。 */
+    fun exportJson(context: Context): String =
+        JsonStore.encode(persons.toList(), LedgerStore.all(context))
 
     /**
-     * 从 JSON 文本恢复数据。
+     * 从 JSON 文本恢复数据（文件夹 + 数据本）。
      * 返回导入的文件夹数量；解析失败返回 -1，由界面提示用户。
      */
     fun importJson(context: Context, text: String): Int {
-        val loaded = JsonStore.decode(text) ?: return -1
-        if (loaded.isEmpty()) return 0
+        val backup = JsonStore.decodeBackup(text) ?: return -1
+        if (backup.persons.isEmpty()) return 0
         persons.clear()
-        persons.addAll(loaded)
+        persons.addAll(backup.persons)
+        // 覆盖式恢复：先清空旧数据本，避免上一份目标的记录残留
+        LedgerStore.clearAll(context)
+        WebProfileStore.clearAll(context)
+        if (backup.ledger.isNotEmpty()) LedgerStore.replaceAll(context, backup.ledger)
         persist()
-        return loaded.size
+        return backup.persons.size
     }
 
-    /** 清空全部本地数据：文件夹、账号、待确认、抓取快照、笔记、证据与待验证清单。 */
+    /** 清空全部本地数据：文件夹、账号、待确认、抓取快照、数据本、旧版笔记与证据。 */
     fun clearAllData(context: Context) {
         persons.clear()
         persist()
         PendingStore.clearAll(context)
         context.getSharedPreferences("video_snapshots", Context.MODE_PRIVATE)
             .edit().clear().apply()
-        // 笔记与证据是敏感内容，跟主数据一起清，避免用户以为清干净了其实没清
+        LedgerStore.clearAll(context)
+        WebProfileStore.clearAll(context)
+        // 旧版三处数据也跟着清：升级过的机器上可能还留着，别让用户以为清干净了
         context.getSharedPreferences("sj_notes", Context.MODE_PRIVATE)
             .edit().clear().apply()
         context.getSharedPreferences("sj_evidence", Context.MODE_PRIVATE)
             .edit().clear().apply()
+        context.getSharedPreferences("sj_quicknotes", Context.MODE_PRIVATE)
+            .edit().clear().apply()
         runCatching {
             java.io.File(context.filesDir, "evidence").deleteRecursively()
+        }
+        runCatching {
+            java.io.File(context.filesDir, "ledger").deleteRecursively()
         }
     }
 

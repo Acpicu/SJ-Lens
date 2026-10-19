@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** 一条「待确认」的新视频：检查时发现、用户还没处理。 */
+/** 一条「待确认」的新内容：检查时发现、用户还没处理。 */
 data class PendingItem(
     val bvid: String,
     val title: String,
@@ -13,7 +13,9 @@ data class PendingItem(
     val personName: String,
     val platform: String,
     val coverUrl: String? = null,
-    /** VIDEO 或 DYNAMIC：决定点击后打开视频还是动态页 */
+    /** 直接可打开的地址；空则按平台规则拼 */
+    val link: String = "",
+    /** VIDEO 或 DYNAMIC：决定点开的是什么 */
     val kind: String = "VIDEO",
     val foundAt: Long
 )
@@ -72,6 +74,7 @@ object PendingStore {
                             personName = o.optString("personName"),
                             platform = o.optString("platform", "BILI"),
                             coverUrl = o.optString("cover").ifEmpty { null },
+                            link = o.optString("link"),
                             kind = o.optString("kind", "VIDEO"),
                             foundAt = o.optLong("foundAt")
                         )
@@ -92,6 +95,7 @@ object PendingStore {
                 o.put("personName", item.personName)
                 o.put("platform", item.platform)
                 o.put("cover", item.coverUrl ?: "")
+                o.put("link", item.link)
                 o.put("kind", item.kind)
                 o.put("foundAt", item.foundAt)
                 arr.put(o)

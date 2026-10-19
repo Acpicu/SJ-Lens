@@ -52,7 +52,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.sj.followclip.data.local.QuickNoteStore
+import com.sj.followclip.data.local.LedgerRecord
+import com.sj.followclip.data.local.LedgerStore
+import com.sj.followclip.data.local.Confidence
+import com.sj.followclip.data.local.RecordKind
 import com.sj.followclip.domain.model.Account
 import com.sj.followclip.domain.model.Person
 import com.sj.followclip.domain.model.totalUnread
@@ -83,8 +86,7 @@ fun PersonDetailScreen(
     onBack: () -> Unit,
     onAccountClick: (Account) -> Unit,
     onDeleteAccount: (Long) -> Unit,
-    onOpenEvidence: (Long) -> Unit,
-    onOpenNotes: (Long) -> Unit,
+    onOpenLedger: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 账号列表直接取传入的数据，删除通过回调交给上层改状态，界面自动刷新
@@ -143,46 +145,10 @@ fun PersonDetailScreen(
             }
 
             item {
-                QuickCaptureCard(
+                LedgerCard(
                     personId = person.id,
-                    onOpenAll = { onOpenNotes(person.id) }
+                    onOpenAll = { onOpenLedger(person.id) }
                 )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenEvidence(person.id) },
-                    shape = RoundedCornerShape(Spacing.cardCorner),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(Spacing.cardPadding),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "证据条目",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(Modifier.height(Spacing.tinyGap))
-                            Text(
-                                text = "E-001 起编号 · 记录来源与信源等级 · 可导出 Markdown",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.textMuted
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.textMuted
-                        )
-                    }
-                }
             }
 
             item {
@@ -395,6 +361,18 @@ private fun AccountCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.textMuted
                 )
+
+                // 主页链接直接露出来：红队最常确认的第一件事就是「当初填的是哪个链接」
+                if (account.homepageUrl.isNotBlank()) {
+                    Spacer(Modifier.height(Spacing.tinyGap))
+                    Text(
+                        text = account.homepageUrl,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Icon(
@@ -407,44 +385,64 @@ private fun AccountCard(
 }
 
 /**
- * 速记卡：一行输入 + 一个「记」按钮，最近三条直接显示，其余进「速记本」。
+ * 数据本卡：已登记多少条、多少条已证实，最近三条就地可见，想到就能补一句。
  *
- * 这里刻意不做必填项、不做等级、不做哈希 —— 随手记要足够快。
+ * 完整登记（出处 / 信源评级 / 置信度 / 截图）在数据本页——
+ * 这里只保证「想到就记」这条路不断，避免随手记变成随手丢。
  */
 @Composable
-private fun QuickCaptureCard(personId: Long, onOpenAll: () -> Unit) {
+private fun LedgerCard(personId: Long, onOpenAll: () -> Unit) {
     val context = LocalContext.current
-    var notes by remember(personId) { mutableStateOf(QuickNoteStore.list(context, personId)) }
+    var records by remember(personId) { mutableStateOf(LedgerStore.list(context, personId)) }
     var text by remember { mutableStateOf("") }
+    var hint by remember { mutableStateOf("") }
     val fmt = remember { SimpleDateFormat("MM-dd HH:mm", Locale.US) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpenAll),
         shape = RoundedCornerShape(Spacing.cardCorner),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(Spacing.cardPadding)) {
+            val stats = LedgerStore.stats(records)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "速记",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.textMuted
+                    text = "数据本",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.width(Spacing.itemGap))
                 Text(
-                    text = "共 ${notes.size} 条",
+                    text = "${records.size} 条 · 已证实 ${stats.confirmed} · 待验证 ${stats.pending}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.textMuted
                 )
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onOpenAll) { Text("速记本") }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.textMuted
+                )
             }
 
+            if (stats.conflicts.isNotEmpty()) {
+                Spacer(Modifier.height(Spacing.tinyGap))
+                Text(
+                    text = "冲突 ${stats.conflicts.size} 处：" +
+                        stats.conflicts.joinToString("、") { it.field },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.itemGap))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text("一句话记下来") },
+                    label = { Text("一句话记下看到的") },
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
@@ -452,38 +450,57 @@ private fun QuickCaptureCard(personId: Long, onOpenAll: () -> Unit) {
                 TextButton(
                     enabled = text.isNotBlank(),
                     onClick = {
-                        notes = QuickNoteStore.add(context, personId, text)
+                        records = LedgerStore.add(
+                            context = context,
+                            personId = personId,
+                            record = LedgerRecord(
+                                id = "",
+                                kind = RecordKind.OTHER,
+                                fieldName = "速记",
+                                value = text,
+                                confidence = Confidence.LOW
+                            )
+                        )
+                        hint = "已记入数据本"
                         text = ""
                     }
                 ) { Text("记") }
             }
 
-            notes.take(3).forEach { note ->
+            if (hint.isNotEmpty()) {
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            records.take(3).forEach { record ->
                 Spacer(Modifier.height(Spacing.itemGap))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = note.kind,
+                        text = record.id,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.width(Spacing.tinyGap))
                     Text(
-                        text = fmt.format(Date(note.at)),
+                        text = fmt.format(Date(record.at)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.textMuted
                     )
                 }
                 Text(
-                    text = note.text,
+                    text = record.value,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            if (notes.isEmpty()) {
+            if (records.isEmpty()) {
                 Spacer(Modifier.height(Spacing.itemGap))
                 Text(
-                    text = "还没记过。比如「10/19 发了 1 条，晚上 9 点」。",
+                    text = "还没有记录。先写一句「抖音号叫某某，简介提到某学校」，出处稍后补。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.textMuted
                 )
@@ -501,8 +518,7 @@ private fun PersonDetailScreenPreview() {
             onBack = {},
             onAccountClick = {},
             onDeleteAccount = {},
-            onOpenEvidence = {},
-            onOpenNotes = {}
+            onOpenLedger = {}
         )
     }
 }

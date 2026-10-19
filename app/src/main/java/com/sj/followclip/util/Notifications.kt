@@ -22,17 +22,76 @@ object Notifications {
     private const val CHANNEL_ID = "new_content"
     private const val NOTIFICATION_ID = 1001
 
+    /** 检查进行中的常驻横幅：独立渠道，低打扰、不可滑走。 */
+    private const val CHANNEL_CHECKING = "checking"
+    private const val CHECKING_ID = 2001
+
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "有更新",
-            NotificationManager.IMPORTANCE_DEFAULT
-        ).apply {
-            description = "关注的博主有新作品时提醒"
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_ID,
+                "有更新",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply { description = "关注的博主有新作品时提醒" }
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_CHECKING,
+                "检查中",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { description = "SJ 正在检查所有卡片的更新状态" }
+        )
+    }
+
+    /**
+     * 检查开始的常驻横幅：「SJ 正在检查 N 个卡片的更新状态」。
+     *
+     * 常驻（ongoing）+ 进度条：用户随时能看到机器在干活，
+     * 也让「到底检查了没有」这件事不再靠猜。
+     */
+    fun startChecking(context: Context, total: Int) {
+        ensureChannel(context)
+        updateChecking(context, 0, total, "准备中")
+    }
+
+    fun updateChecking(context: Context, done: Int, total: Int, label: String) {
+        val safeTotal = total.coerceAtLeast(1)
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        context.getSystemService(NotificationManager::class.java)
-            ?.createNotificationChannel(channel)
+        val pending = PendingIntent.getActivity(
+            context,
+            2,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_CHECKING)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("SJ 正在检查 ${total} 个卡片的更新状态")
+            .setContentText(
+                if (label.isBlank()) "$done / $safeTotal" else "$label · $done / $safeTotal"
+            )
+            .setProgress(safeTotal, done.coerceIn(0, safeTotal), false)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(pending)
+            .build()
+
+        runCatching {
+            NotificationManagerCompat.from(context).notify(CHECKING_ID, notification)
+        }
+    }
+
+    /** 检查结束：常驻横幅撤掉。 */
+    fun stopChecking(context: Context) {
+        runCatching {
+            NotificationManagerCompat.from(context).cancel(CHECKING_ID)
+        }
     }
 
     /**

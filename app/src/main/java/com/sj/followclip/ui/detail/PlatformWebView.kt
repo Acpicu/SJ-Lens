@@ -204,31 +204,38 @@ fun PlatformWebView(
                                         val parsed = parseItems(raw)
                                         debug = parsed.debug
                                         if (parsed.workCount > 0) {
-                                            // 只有连续两次读到同一个数字才算稳定。
-                                            // 单次抖动（28 → 27 → 28）会造成误报，必须先过滤。
-                                            val stable = parsed.workCount == lastSeenCount
-                                            lastSeenCount = parsed.workCount
-                                            workCount = parsed.workCount
-
-                                            if (stable && accountId > 0L) {
-                                                val prev = VideoSnapshotStore
-                                                    .load(ctx, accountId, "dyn")
-                                                    .mapNotNull { it.toIntOrNull() }
-                                                    .maxOrNull() ?: 0
-                                                newCount = if (prev in 1 until parsed.workCount) {
-                                                    parsed.workCount - prev
-                                                } else {
-                                                    0
-                                                }
-                                                VideoSnapshotStore.save(
-                                                    ctx, accountId,
-                                                    listOf(parsed.workCount.toString()),
-                                                    "dyn"
-                                                )
-                                                if (personId > 0L) {
-                                                    AppUiState.setUnread(
-                                                        personId, accountId, newCount
-                                                    )
+                                            val seen = parsed.workCount
+                                            workCount = seen
+                                            // 只认单调不减的读数：28 → 27 → 28 这种抖动会造成误报
+                                            if (seen >= lastSeenCount) {
+                                                lastSeenCount = seen
+                                                if (accountId > 0L) {
+                                                    // 注意：这里存的是「作品总数」而不是作品 id，
+                                                    // 与隐藏检查用的 "dy" 键分开，别混用。
+                                                    val prev = VideoSnapshotStore
+                                                        .load(ctx, accountId, "dyn")
+                                                        .mapNotNull { it.toIntOrNull() }
+                                                        .maxOrNull() ?: 0
+                                                    val fresh = if (prev in 1 until seen) {
+                                                        seen - prev
+                                                    } else {
+                                                        0
+                                                    }
+                                                    // 建基线也要落盘：以前首次读不到稳定值就不存，
+                                                    // 之后 prev 永远是 0，于是「发了作品也不报更新」
+                                                    if (prev == 0 || seen > prev) {
+                                                        VideoSnapshotStore.save(
+                                                            ctx, accountId,
+                                                            listOf(seen.toString()),
+                                                            "dyn"
+                                                        )
+                                                    }
+                                                    newCount = fresh
+                                                    if (personId > 0L) {
+                                                        AppUiState.setUnread(
+                                                            personId, accountId, fresh
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
