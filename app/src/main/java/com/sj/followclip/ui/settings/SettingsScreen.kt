@@ -42,6 +42,7 @@ import com.sj.followclip.ui.state.AppUiState
 import com.sj.followclip.ui.theme.SJFollowClipTheme
 import com.sj.followclip.ui.theme.Spacing
 import com.sj.followclip.ui.theme.textMuted
+import com.sj.followclip.util.CacheCleaner
 import com.sj.followclip.util.WebCookies
 
 /**
@@ -66,6 +67,7 @@ fun SettingsScreen(
     var confirmClearPending by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf("") }
 
+    val cacheSize = remember(tick) { CacheCleaner.sizeBytes(context) }
     val biliLogged = remember(tick) { BiliSource.isLoggedIn() }
     val douyinLogged = remember(tick) { WebCookies.douyinLoggedIn() }
     val pendingCount = PendingStore.items.size
@@ -164,6 +166,17 @@ fun SettingsScreen(
                             modifier = Modifier.padding(top = Spacing.tinyGap)
                         )
                     }
+                    Spacer(Modifier.height(Spacing.gridGap))
+                    ActionRow(
+                        title = "清理缓存",
+                        summary = "网页缓存占 ${CacheCleaner.format(cacheSize)}，清掉不影响数据本、截图与登录",
+                        action = "清理",
+                        onAction = {
+                            CacheCleaner.clear(context)
+                            tick++
+                            importResult = "已清缓存"
+                        }
+                    )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
                         title = "最近检查结果",

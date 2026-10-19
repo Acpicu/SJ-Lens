@@ -48,8 +48,12 @@ class CheckWorker(
         }
         Notifications.stopChecking(applicationContext)
         val added = outcome.results.sumOf { it.newCount }
-        if (added > 0) {
-            Notifications.notifyNewContent(applicationContext, added)
+        // 后台这一轮用户看不到界面：给一条「检查报告已生成」，点开就能回到应用看明细
+        Notifications.notifyCheckDone(applicationContext, added)
+
+        // 后台没有窗口，快手这一轮是跳过的：留个标记，用户回到前台立刻补查
+        if (outcome.results.any { it.note.contains("快手要前台") }) {
+            markKuaishouPending(applicationContext)
         }
 
         // 定期提醒：抖音/快手网页看不到「日常」，只能按用户设定的间隔催他去看一眼
@@ -70,5 +74,23 @@ class CheckWorker(
 
         // 限流或网络问题：交给系统退避重试，不立即再打接口
         return if (outcome.error != null) Result.retry() else Result.success()
+    }
+
+    companion object {
+        private const val PREF = "check_flags"
+        private const val KEY_KUAISHOU_PENDING = "kuaishou_pending"
+
+        private fun markKuaishouPending(context: Context) {
+            context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+                .edit().putBoolean(KEY_KUAISHOU_PENDING, true).apply()
+        }
+
+        /** 有没有「后台跳过快手」的待补查标记。 */
+        fun consumeKuaishouPending(context: Context): Boolean {
+            val prefs = context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+            val pending = prefs.getBoolean(KEY_KUAISHOU_PENDING, false)
+            if (pending) prefs.edit().putBoolean(KEY_KUAISHOU_PENDING, false).apply()
+            return pending
+        }
     }
 }

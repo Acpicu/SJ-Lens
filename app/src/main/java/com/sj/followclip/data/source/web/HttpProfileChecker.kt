@@ -34,7 +34,7 @@ data class ProfileSnapshot(
  */
 object HttpProfileChecker {
 
-    private const val TIMEOUT_MS = 12_000
+    private const val TIMEOUT_MS = 8_000
     private const val UA_MOBILE =
         "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 " +
             "(KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
@@ -50,7 +50,11 @@ object HttpProfileChecker {
         // 而 runCatching 会把它吞成「找不到 sec_uid」这种误导性提示。
         return withContext(Dispatchers.IO) {
             when (platform) {
-                Platform.DOUYIN -> fetchDouyin(homepageUrl)
+                Platform.DOUYIN -> {
+                    // 移动数据下首包经常超时，重试一次能救回大半
+                    val first = fetchDouyin(homepageUrl)
+                    if (first.isSuccess) first else fetchDouyin(homepageUrl)
+                }
                 else -> Result.failure(IllegalStateException("暂不支持纯 HTTP 检查"))
             }
         }

@@ -10,7 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import com.sj.followclip.data.check.CheckController
 import com.sj.followclip.data.work.CheckScheduler
+import com.sj.followclip.data.work.CheckWorker
 import com.sj.followclip.ui.common.BatteryGuideDialog
 import com.sj.followclip.ui.common.shouldShowBatteryGuide
 import com.sj.followclip.util.Notifications
@@ -138,6 +140,15 @@ fun AppNavigation() {
     LaunchedEffect(Unit) {
         Notifications.ensureChannel(context)
         CheckScheduler.schedule(context)
+    }
+
+    // 后台那一轮跑不了快手（WebView 要窗口）：留了标记就趁现在补一轮
+    LaunchedEffect(Unit) {
+        if (AppUiState.persons.isNotEmpty() &&
+            CheckWorker.consumeKuaishouPending(context)
+        ) {
+            CheckController.start(context, AppUiState.persons.toList(), includeWeb = true)
+        }
     }
 
     // Android 13+ 通知权限是运行时权限，不授权则后台发现了新内容也发不出来

@@ -87,6 +87,31 @@ object Notifications {
         }
     }
 
+    /** 后台检查完成：给一条可点的结果通知（前台检查有明细弹窗，不重复打扰）。 */
+    fun notifyCheckDone(context: Context, added: Int) {
+        ensureChannel(context)
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pending = PendingIntent.getActivity(
+            context,
+            3,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("检查报告已生成")
+            .setContentText(if (added > 0) "本轮发现 $added 条变化，点开看明细" else "本轮没有新变化")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pending)
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID + 2, notification)
+        }
+    }
+
     /** 检查结束：常驻横幅撤掉。 */
     fun stopChecking(context: Context) {
         runCatching {

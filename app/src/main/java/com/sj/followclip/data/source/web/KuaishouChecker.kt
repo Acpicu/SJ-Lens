@@ -177,6 +177,8 @@ object KuaishouChecker {
         runCatching {
             (webView.parent as? ViewGroup)?.removeView(webView)
             webView.stopLoading()
+            // Chromium 的 HTTP 缓存用几次就能堆几百 MB，每次查完立刻清
+            webView.clearCache(true)
             webView.destroy()
         }
 

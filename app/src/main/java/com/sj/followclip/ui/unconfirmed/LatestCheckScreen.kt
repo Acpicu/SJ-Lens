@@ -25,6 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -127,9 +129,17 @@ fun LatestCheckScreen(modifier: Modifier = Modifier) {
     }
 }
 
-/** 一行结果：封面 + 标题 + 时间，点整行去 App 看。 */
+/** 文字类变化（主页改名 / 改简介 / 作品数 / 纯文字动态）走文字卡片，不配视频封面。 */
+private fun isTextItem(item: PendingItem): Boolean =
+    item.kind == "PROFILE" || item.kind == "DYNAMIC" || item.coverUrl.isNullOrBlank()
+
+/** 一行结果：有封面的走图文行，纯文字变化走文字卡片。 */
 @Composable
 private fun ResultRow(item: PendingItem, onClick: () -> Unit) {
+    if (isTextItem(item)) {
+        TextResultCard(item = item, onClick = onClick)
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -186,6 +196,62 @@ private fun ResultRow(item: PendingItem, onClick: () -> Unit) {
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.textMuted
+            )
+        }
+    }
+}
+
+/**
+ * 文字卡片：整条变化的原文直接可读。
+ *
+ * 主页改名、改简介、作品数变化这类信息本身就是一个句子，
+ * 套上 16:9 的视频封面反而看不清内容 —— 红队要看的是「变了什么」。
+ */
+@Composable
+private fun TextResultCard(item: PendingItem, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(Spacing.cardCorner),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(Spacing.cardPadding)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = when (item.kind) {
+                        "PROFILE" -> "主页变化"
+                        "DYNAMIC" -> "动态"
+                        else -> "文字更新"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(Spacing.itemGap))
+                Text(
+                    text = when (item.platform) {
+                        "BILI" -> "B站"
+                        "DOUYIN" -> "抖音"
+                        "KUAISHOU" -> "快手"
+                        else -> item.platform
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.textMuted
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = relativeTime(item.foundAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.textMuted
+                )
+            }
+            Spacer(Modifier.height(Spacing.tinyGap))
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
