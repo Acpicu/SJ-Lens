@@ -1,5 +1,0 @@
-﻿fix: 中文标点输入丢失 + SJ 多色渐变 (v2.9.2)
-
-- 数据本所有输入框改为受控 TextFieldValue: 保留输入法组合态与选区,
-  修复中文全角引号打不出来、光标回跳的问题
-- 首页 SJ 渐变由两色扩到三色(primary/secondary/tertiary)

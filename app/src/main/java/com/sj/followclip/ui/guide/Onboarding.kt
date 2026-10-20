@@ -1,9 +1,13 @@
-package com.sj.followclip.ui.guide
+﻿package com.sj.followclip.ui.guide
 
+import android.Manifest
 import android.content.Context
-import androidx.compose.foundation.layout.Arrangement
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,64 +15,68 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import com.sj.followclip.ui.theme.Spacing
 import com.sj.followclip.ui.theme.textMuted
+import kotlinx.coroutines.launch
 
 /**
- * 首次启动的引导。
+ * 首次启动的引导：逐页滑动的独立页面，看完即止。
  *
- * 只讲四件新人一定会踩的事，不写操作步骤（那属于教程，已按定位删除）：
- * 1. 基线机制——第一轮只记状态，第二轮起才报变化
- * 2. 三个平台的差别——抖音后台能查、快手后台走 HTTP、具体条目要前台
- * 3. 数据本是干什么的
- * 4. 通知权限 + 检查可以退出应用
+ * 只讲四件新人必踩的事，外加一页通知设置；顶部「n / 总页数」表示进度。
+ * 不写操作步骤（教程已按定位删除）。
  */
-private data class GuideBlock(val title: String, val body: String)
+private data class Page(val title: String, val lines: List<String>)
 
-private val BLOCKS = listOf(
-    GuideBlock(
-        "① 更新判定靠基线",
-        "第一次检查只把目标当前状态记下来（作品数 / 昵称 / 简介），本轮不会报更新；" +
-            "从第二轮起每次跟基线比对，变了才出现在「最近检查」里。所以第一轮看到" +
-            "「都是见过的」是正常的。"
+private val PAGES = listOf(
+    Page(
+        "更新判定靠基线",
+        listOf(
+            "第一次检查只记下目标当前状态（作品数 / 昵称 / 简介），这一轮不会报更新。",
+            "从第二轮起每次跟基线比对，变了才出现在「最近检查」里。",
+            "所以第一轮看到「都是见过的」是正常的。"
+        )
     ),
-    GuideBlock(
-        "② 三个平台查法不同",
-        "B站：公开接口，作品与动态逐条。\n" +
-            "抖音：作品数 / 改名 / 改简介前台后台都能查；具体是哪几条新作品要应用在前台时补抓。\n" +
-            "快手：前台用真实渲染，后台走分享页 HTTP 直取作品数。"
+    Page(
+        "三个平台查法不同",
+        listOf(
+            "B站：公开接口，作品与动态逐条可点。",
+            "抖音：作品数 / 改名 / 改简介前台后台都能查，具体哪几条要前台补抓。",
+            "快手：前台真实渲染，后台走分享页 HTTP 直取作品数。"
+        )
     ),
-    GuideBlock(
-        "③ 检查可以退出应用",
-        "点「检查」后会挂一条常驻通知跑完，期间可以退出应用做别的事；" +
-            "跑完会弹一条「检查报告已生成」的横幅，点它回到应用看明细。横幅上可以直接取消。"
+    Page(
+        "检查可以退出应用",
+        listOf(
+            "点「检查」后由前台服务执行，可以退出应用做别的事。",
+            "跑完弹「检查报告已生成」横幅，点它回到应用看明细。",
+            "横幅上可以直接取消这一轮。"
+        )
     ),
-    GuideBlock(
-        "④ 数据本是交档用的",
-        "一条记录 = 一条可陈述事实，强制带出处、信源评级（Admiralty A1–F6）、置信度与状态；" +
-            "同一字段出现两个不同值会被点名为「冲突」，六类关键事实缺失会列出「缺口」，" +
-            "最后可导出带时间线的 Markdown 简报。"
+    Page(
+        "数据本是交档用的",
+        listOf(
+            "一条记录 = 一条可陈述事实，强制带出处、信源评级、置信度与状态。",
+            "同一字段出现两个不同值会被点名「冲突」，六类关键事实缺失会列「缺口」。",
+            "可导出 Markdown 与单页 HTML 简报，含时间线。"
+        )
     )
 )
 
@@ -84,101 +92,158 @@ fun markOnboardingShown(context: Context) {
         .edit().putBoolean(KEY_ONBOARDING, true).apply()
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GuideContent() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.gridGap)
-    ) {
-        BLOCKS.forEach { block ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(Spacing.cardCorner),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+fun OnboardingScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val pageCount = PAGES.size + 1
+    val pagerState = rememberPagerState(pageCount = { pageCount })
+    val current = pagerState.currentPage
+
+    val notifyPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                title = { Text("使用引导") },
+                actions = {
+                    Text(
+                        text = "${current + 1} / $pageCount",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.textMuted,
+                        modifier = Modifier.padding(end = Spacing.pageHorizontal)
+                    )
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = Spacing.pageHorizontal)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { index ->
+                if (index < PAGES.size) {
+                    val page = PAGES[index]
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Spacer(Modifier.height(Spacing.sectionGap))
+                        Text(
+                            text = page.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(Modifier.height(Spacing.gridGap))
+                        page.lines.forEach { line ->
+                            Row(modifier = Modifier.padding(vertical = Spacing.tinyGap)) {
+                                Text(
+                                    text = "· ",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    NotificationPage(
+                        onAllow = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        },
+                        onBatterySettings = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = Spacing.gridGap),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(Spacing.cardPadding)) {
-                    Text(
-                        text = block.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        letterSpacing = 1.sp
-                    )
-                    Spacer(Modifier.height(Spacing.tinyGap))
-                    Text(
-                        text = block.body,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                if (current > 0) {
+                    TextButton(onClick = {
+                        scope.launch { pagerState.animateScrollToPage(current - 1) }
+                    }) { Text("上一页") }
+                }
+                Spacer(Modifier.weight(1f))
+                if (current < pageCount - 1) {
+                    Button(onClick = {
+                        scope.launch { pagerState.animateScrollToPage(current + 1) }
+                    }) { Text("下一页") }
+                } else {
+                    Button(onClick = onBack) { Text("开始使用") }
                 }
             }
         }
     }
 }
 
-/** 首次启动弹一次。只弹一次，之后从设置里随时能再打开。 */
 @Composable
-fun OnboardingDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("开始之前，四件事") },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                GuideContent()
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("知道了") }
-        }
-    )
-}
-
-/** 设置 →「使用引导」：同一份内容，随时可看。 */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun OnboardingScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                title = { Text("使用引导") }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(
-                start = Spacing.pageHorizontal,
-                end = Spacing.pageHorizontal,
-                top = Spacing.gridGap,
-                bottom = Spacing.sectionGap
+private fun NotificationPage(onAllow: () -> Unit, onBatterySettings: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Spacer(Modifier.height(Spacing.sectionGap))
+        Text(
+            text = "让通知更快抵达",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = 1.sp
+        )
+        Spacer(Modifier.height(Spacing.gridGap))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(Spacing.cardCorner),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            item {
+            Column(modifier = Modifier.padding(Spacing.cardPadding)) {
                 Text(
-                    text = "这四条看懂，就不会把「第一轮不报更新」当成故障。",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.textMuted,
-                    modifier = Modifier.padding(bottom = Spacing.gridGap)
+                    text = "允许通知：检查跑完要弹横幅告诉你结果。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(Spacing.tinyGap))
+                Text(
+                    text = "关闭省电限制：系统省电策略会掐掉后台检查，允许后台运行才稳定。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            item { GuideContent() }
-            item {
-                Spacer(Modifier.height(Spacing.sectionGap))
-                androidx.compose.material3.Button(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("开始使用") }
-            }
         }
+        Spacer(Modifier.height(Spacing.gridGap))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = onAllow) { Text("允许通知") }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onBatterySettings) { Text("省电设置") }
+        }
+        Spacer(Modifier.height(Spacing.tinyGap))
+        Text(
+            text = "两项都可以以后在系统设置里改。",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.textMuted
+        )
     }
 }
