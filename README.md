@@ -50,6 +50,29 @@
 4. 作品列表未分页：B站 取首页 30 条，抖音/快手 取首屏
 5. 抖音 `aweme/post` 未逆向 `a_bogus`，条目由 DOM 渲染取得
 
+## 已知缺陷：数据本无法输入中文全角引号
+
+**现象**：在数据本的输入框（字段名 / 值 / 出处 / 标签 / 备注 / 快速登记）里输入 `“` 时，引号不落字，光标跳回前一个汉字之前。其余字符（中文、英文、数字、其他标点）正常。
+
+**已排除**：存储层只做 `trim()`；`onValueChange` 无任何过滤；保存与回显均原样。问题不在业务代码。
+
+**试过且无效的三层实现**：
+
+| 实现 | 结果 |
+|---|---|
+| `OutlinedTextField(value: String)` | 无效 |
+| 输入框内 `remember { TextFieldValue }` + `LaunchedEffect` 回写 String | 无效 |
+| `TextFieldValue` 全程托管在表单状态（当前实现） | 无效 |
+
+**判断**：问题位于 Compose 文本输入层与设备中文输入法（Android 16 + 该 IME）对全角引号「组合态 → 提交」的处理上：`“` 需要一次 `setComposingText` 自动配对，Compose 的受控状态重建会打断它。
+
+**后续可选方向**（未实施，避免影响其他输入框）：
+
+- 换输入法（讯飞 / 搜狗 / Gboard）验证是否为 IME 侧问题
+- 用 Compose 1.7+ 的 `PlatformTextInputInterceptor` 接管提交
+- 数据本输入改为 `AndroidView` 包装原生 `EditText`，绕开 Compose 文本栈
+- 临时规避：在别处写好文本后粘贴进来（粘贴路径不受组合态影响）
+
 ## 构建
 
 需要 JDK 17 与 Android SDK（compileSdk 36）。
