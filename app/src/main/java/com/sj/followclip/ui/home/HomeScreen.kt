@@ -367,24 +367,32 @@ private fun AppHeader(
                 text = if (manageMode) {
                     buildAnnotatedString { append("管理文件夹") }
                 } else {
-                    // 一条渐变铺满整串字：开头是品牌色，往右逐渐褪成正常文字色
+                    // SJ 用主色实心，LENS 用正常文字色：不靠渐变，靠对比
                     buildAnnotatedString {
-                        withStyle(
-                            SpanStyle(
-                                brush = Brush.linearGradient(
-                                    colorStops = arrayOf(
-                                        0.00f to MaterialTheme.colorScheme.primary,
-                                        0.16f to MaterialTheme.colorScheme.secondary,
-                                        0.32f to MaterialTheme.colorScheme.tertiary,
-                                        0.50f to MaterialTheme.colorScheme.onSurface,
-                                        1.00f to MaterialTheme.colorScheme.onSurface
-                                    )
-                                )
-                            )
-                        ) { append("SJ LENS") }
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                            append("SJ")
+                        }
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
+                            append(" LENS")
+                        }
                     }
                 },
                 style = MaterialTheme.typography.headlineMedium
+            )
+            Spacer(Modifier.height(Spacing.tinyGap))
+            // 一条 60dp 的渐隐细线，替代花哨的多色标题
+            Box(
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(2.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0f)
+                            )
+                        )
+                    )
             )
             Spacer(Modifier.height(Spacing.tinyGap))
             Text(
