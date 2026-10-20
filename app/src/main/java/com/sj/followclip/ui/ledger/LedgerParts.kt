@@ -229,6 +229,15 @@ internal fun LedgerRecordCard(
                 )
             }
 
+            if (record.sha256.isNotBlank()) {
+                Text(
+                    text = "SHA-256 ${record.sha256.take(16)}…",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+
             if (record.note.isNotBlank()) {
                 Text(
                     text = record.note,

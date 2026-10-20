@@ -48,6 +48,7 @@ import com.sj.followclip.data.local.LedgerRecord
 import com.sj.followclip.data.local.LedgerStore
 import com.sj.followclip.data.local.RecordKind
 import com.sj.followclip.data.local.RecordStatus
+import com.sj.followclip.ui.state.AppUiState
 import com.sj.followclip.ui.theme.Spacing
 import com.sj.followclip.ui.theme.textMuted
 import java.io.File
@@ -65,6 +66,8 @@ internal class LedgerDraft(record: LedgerRecord? = null) {
     var tags by mutableStateOf(record?.tags?.joinToString(",").orEmpty())
     var note by mutableStateOf(record?.note.orEmpty())
     var shotPath by mutableStateOf(record?.shotPath.orEmpty())
+    var sha256 by mutableStateOf(record?.sha256.orEmpty())
+    var accountRef by mutableStateOf(record?.accountRef ?: 0L)
     var shotName by mutableStateOf(record?.shotPath?.takeIf { it.isNotBlank() }?.let { File(it).name }.orEmpty())
 
     val grade: String get() = letter + digit
@@ -102,6 +105,7 @@ fun LedgerScreen(
     var hint by remember { mutableStateOf("") }
     var quickText by remember { mutableStateOf("") }
 
+    val accounts = AppUiState.findPerson(personId)?.accounts.orEmpty()
     val draft = remember(personId) { LedgerDraft() }
     val editDraft = remember(editing) { editing?.let { LedgerDraft(it) } }
 
@@ -120,7 +124,8 @@ fun LedgerScreen(
             if (file != null) {
                 draft.shotPath = file.absolutePath
                 draft.shotName = file.name
-                hint = "已附截图 ${file.name}"
+                draft.sha256 = com.sj.followclip.util.FileHash.sha256(file)
+                hint = "已附截图 ${file.name}（已算 SHA-256）"
             } else {
                 hint = "截图保存失败"
             }
@@ -136,6 +141,7 @@ fun LedgerScreen(
             if (file != null) {
                 editDraft?.shotPath = file.absolutePath
                 editDraft?.shotName = file.name
+                editDraft?.sha256 = com.sj.followclip.util.FileHash.sha256(file)
             }
         }
     }
@@ -277,6 +283,7 @@ fun LedgerScreen(
                             Spacer(Modifier.height(Spacing.itemGap))
                             LedgerFormFields(
                                 draft = draft,
+                                accounts = accounts,
                                 onPickPhoto = { photoLauncher.launch("image/*") }
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -401,6 +408,7 @@ fun LedgerScreen(
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     LedgerFormFields(
                         draft = editDraft,
+                        accounts = accounts,
                         onPickPhoto = { editPhotoLauncher.launch("image/*") }
                     )
                 }
@@ -430,6 +438,7 @@ fun LedgerScreen(
 @Composable
 private fun LedgerFormFields(
     draft: LedgerDraft,
+    accounts: List<com.sj.followclip.domain.model.Account>,
     onPickPhoto: (() -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -444,6 +453,25 @@ private fun LedgerFormFields(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.textMuted
         )
+
+        // 「账号」类记录可以绑到目标下的某个平台号：以后一条事实能追溯到具体账号
+        if (draft.kind == RecordKind.ACCOUNT && accounts.isNotEmpty()) {
+            Spacer(Modifier.height(Spacing.tinyGap))
+            Text(
+                text = "绑定到哪个号（可选）",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            ChoiceChips(
+                options = listOf(0L) + accounts.map { it.id },
+                selected = draft.accountRef,
+                label = { id ->
+                    if (id == 0L) "不绑定"
+                    else accounts.firstOrNull { it.id == id }?.displayTitle ?: "号 $id"
+                },
+                onSelect = { draft.accountRef = it }
+            )
+        }
 
         Spacer(Modifier.height(Spacing.itemGap))
         OutlinedTextField(
@@ -530,6 +558,14 @@ private fun LedgerFormFields(
             modifier = Modifier.fillMaxWidth()
         )
 
+        if (draft.sha256.isNotBlank()) {
+            Text(
+                text = "SHA-256 ${draft.sha256.take(16)}…",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.textMuted
+            )
+        }
+
         if (onPickPhoto != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onPickPhoto) {
@@ -559,7 +595,9 @@ internal fun LedgerDraft.toRecord(): LedgerRecord = LedgerRecord(
     status = status,
     tags = tagList,
     note = note,
-    shotPath = shotPath
+    shotPath = shotPath,
+    sha256 = sha256,
+    accountRef = accountRef
 )
 
 internal fun LedgerDraft.reset() {
@@ -575,6 +613,8 @@ internal fun LedgerDraft.reset() {
     note = ""
     shotPath = ""
     shotName = ""
+    sha256 = ""
+    accountRef = 0L
 }
 
 

@@ -78,6 +78,19 @@ fun LedgerReportScreen(
         }
     }
 
+    val htmlLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val text = LedgerStore.buildHtml(personName, records)
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use {
+                    it.write(text.toByteArray(Charsets.UTF_8))
+                }
+            }
+        }
+    }
+
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/markdown")
     ) { uri: Uri? ->
@@ -110,7 +123,15 @@ fun LedgerReportScreen(
                                 "ledger-${personName.ifBlank { "target" }}-report.md"
                             )
                         }
-                    ) { Text("导出") }
+                    ) { Text("MD") }
+                    TextButton(
+                        enabled = records.isNotEmpty(),
+                        onClick = {
+                            htmlLauncher.launch(
+                                "ledger-${personName.ifBlank { "target" }}-report.html"
+                            )
+                        }
+                    ) { Text("HTML") }
                 }
             )
         }

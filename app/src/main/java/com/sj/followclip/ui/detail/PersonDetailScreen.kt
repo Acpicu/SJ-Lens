@@ -92,6 +92,17 @@ fun PersonDetailScreen(
 ) {
     // 账号列表直接取传入的数据，删除通过回调交给上层改状态，界面自动刷新
     val accounts = person?.accounts.orEmpty()
+    val context = LocalContext.current
+    // 每个平台号被数据本引用了几条（账号归并的反向索引）
+    val ledgerRefs = remember(person?.id) {
+        runCatching {
+            com.sj.followclip.data.local.LedgerStore.list(context, person?.id ?: 0L)
+                .map { it.accountRef }
+                .filter { it > 0L }
+                .groupingBy { it }
+                .eachCount()
+        }.getOrDefault(emptyMap())
+    }
     var pendingDelete by remember { mutableStateOf<Account?>(null) }
 
     Scaffold(
@@ -186,6 +197,7 @@ fun PersonDetailScreen(
             items(items = accounts, key = { it.id }) { account ->
                 AccountCard(
                     account = account,
+                    ledgerRefs = ledgerRefs[account.id] ?: 0,
                     onClick = { onAccountClick(account) },
                     onLongClick = { pendingDelete = account }
                 )
@@ -290,6 +302,7 @@ private fun PersonHeader(person: Person, accountCount: Int) {
 @Composable
 private fun AccountCard(
     account: Account,
+    ledgerRefs: Int,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -362,6 +375,15 @@ private fun AccountCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.textMuted
                 )
+
+                if (ledgerRefs > 0) {
+                    Spacer(Modifier.height(Spacing.tinyGap))
+                    Text(
+                        text = "数据本引用 $ledgerRefs 条",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
                 if (account.platform == Platform.KUAISHOU) {
                     Spacer(Modifier.height(Spacing.tinyGap))
