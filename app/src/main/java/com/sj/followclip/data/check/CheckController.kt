@@ -72,7 +72,12 @@ object CheckController {
      * 真正干活的地方。放在前台服务里跑：用户点完检查就退出应用去做别的事，
      * 这一轮照样跑完并推送「检查报告已生成」。
      */
-    suspend fun execute(context: Context, persons: List<Person>, includeWeb: Boolean) {
+    suspend fun execute(
+        context: Context,
+        persons: List<Person>,
+        includeWeb: Boolean,
+        baselineOnly: Boolean = false
+    ) {
         val appContext = context.applicationContext
         val snapshotOfPersons = persons.toList()
         lastManual = includeWeb
@@ -98,16 +103,27 @@ object CheckController {
             Notifications.updateChecking(appContext, d, all, current)
         }
 
-        PendingStore.replaceAll(appContext, outcome.items.sortedByDescending { it.foundAt })
-        outcome.results.forEach { r -> AppUiState.setUnread(r.personId, r.accountId, r.newCount) }
+        if (baselineOnly) {
+            // 只建基线：把本轮结果丢掉，角标清零，下次检查才有「变化」可言
+            PendingStore.clearAll(appContext)
+            outcome.results.forEach { r -> AppUiState.setUnread(r.personId, r.accountId, 0) }
+        } else {
+            PendingStore.replaceAll(appContext, outcome.items.sortedByDescending { it.foundAt })
+            outcome.results.forEach { r -> AppUiState.setUnread(r.personId, r.accountId, r.newCount) }
+        }
 
         Notifications.stopChecking(appContext)
 
         val added = outcome.results.sumOf { it.newCount }
         lastResults = outcome.results
         lastError = outcome.error
-        statusLine = outcome.error ?: if (added > 0) "本次新增 $added 条" else "没有新更新"
-        showDetail = includeWeb && outcome.results.isNotEmpty()
+        statusLine = when {
+            baselineOnly -> "基线已建立（${outcome.results.count { it.fetched > 0 }} 个账号）"
+            outcome.error != null -> outcome.error!!
+            added > 0 -> "本次新增 $added 条"
+            else -> "没有新更新"
+        }
+        showDetail = !baselineOnly && includeWeb && outcome.results.isNotEmpty()
 
         // 前台服务跑的一轮：完成就给一条通知，用户退出应用也能知道
         Notifications.notifyCheckDone(appContext, added)
@@ -120,6 +136,16 @@ object CheckController {
         running = false
         delay(3_000)
         if (!running) statusLine = ""
+    }
+
+    /** 只建基线：把当前状态记下来，不报更新、不动角标。 */
+    fun startBaseline(context: Context, persons: List<Person>) {
+        if (running) return
+        if (persons.isEmpty()) {
+            statusLine = "还没有可检查的卡片"
+            return
+        }
+        CheckService.start(context, baselineOnly = true)
     }
 
     /** 点一下检查：交给前台服务，退出应用也不会被打断。 */

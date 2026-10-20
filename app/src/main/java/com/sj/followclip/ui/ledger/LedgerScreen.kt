@@ -59,15 +59,15 @@ import java.io.File
 /** 登记/编辑表单的草稿。放在一个类里，避免二十个 var 在 composable 之间来回传。 */
 internal class LedgerDraft(record: LedgerRecord? = null) {
     var kind by mutableStateOf(record?.kind ?: RecordKind.ACCOUNT)
-    var fieldName by mutableStateOf(record?.fieldName.orEmpty())
-    var value by mutableStateOf(record?.value.orEmpty())
-    var sourceUrl by mutableStateOf(record?.sourceUrl.orEmpty())
+    var fieldName by mutableStateOf(TextFieldValue(record?.fieldName.orEmpty()))
+    var value by mutableStateOf(TextFieldValue(record?.value.orEmpty()))
+    var sourceUrl by mutableStateOf(TextFieldValue(record?.sourceUrl.orEmpty()))
     var letter by mutableStateOf(record?.grade?.take(1)?.ifBlank { "B" } ?: "B")
     var digit by mutableStateOf(record?.grade?.takeLast(1)?.ifBlank { "2" } ?: "2")
     var confidence by mutableStateOf(record?.confidence ?: Confidence.MEDIUM)
     var status by mutableStateOf(record?.status ?: RecordStatus.PENDING)
-    var tags by mutableStateOf(record?.tags?.joinToString(",").orEmpty())
-    var note by mutableStateOf(record?.note.orEmpty())
+    var tags by mutableStateOf(TextFieldValue(record?.tags?.joinToString(",").orEmpty()))
+    var note by mutableStateOf(TextFieldValue(record?.note.orEmpty()))
     var shotPath by mutableStateOf(record?.shotPath.orEmpty())
     var sha256 by mutableStateOf(record?.sha256.orEmpty())
     var accountRef by mutableStateOf(record?.accountRef ?: 0L)
@@ -75,12 +75,12 @@ internal class LedgerDraft(record: LedgerRecord? = null) {
 
     val grade: String get() = letter + digit
     val tagList: List<String>
-        get() = tags.split(',', '，', ' ')
+        get() = tags.text.split(',', '，', ' ')
             .map { it.trim().removePrefix("#") }
             .filter { it.isNotEmpty() }
 
     /** 只有填了值才有资格入档：空记录会把统计全污染。 */
-    val canSubmit: Boolean get() = value.isNotBlank()
+    val canSubmit: Boolean get() = value.text.isNotBlank()
 }
 
 /**
@@ -106,7 +106,7 @@ fun LedgerScreen(
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<LedgerRecord?>(null) }
     var hint by remember { mutableStateOf("") }
-    var quickText by remember { mutableStateOf("") }
+    var quickValue by remember { mutableStateOf(TextFieldValue("")) }
 
     val accounts = AppUiState.findPerson(personId)?.accounts.orEmpty()
     val draft = remember(personId) { LedgerDraft() }
@@ -233,12 +233,12 @@ fun LedgerScreen(
                     Column(modifier = Modifier.padding(Spacing.cardPadding)) {
                         DraftTextField(
                             label = "一句话登记（先记下，再补出处）",
-                            initial = quickText,
-                            onValue = { quickText = it }
+                            value = quickValue,
+                            onValue = { quickValue = it }
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
-                                enabled = quickText.isNotBlank(),
+                                enabled = quickValue.text.isNotBlank(),
                                 onClick = {
                                     records = LedgerStore.add(
                                         context = context,
@@ -247,12 +247,12 @@ fun LedgerScreen(
                                             id = "",
                                             kind = RecordKind.OTHER,
                                             fieldName = "速记",
-                                            value = quickText,
+                                            value = quickValue.text,
                                             confidence = Confidence.LOW
                                         )
                                     )
                                     hint = "已登记 ${records.firstOrNull()?.id.orEmpty()}"
-                                    quickText = ""
+                                    quickValue = TextFieldValue("")
                                 }
                             ) { Text("记") }
                             Spacer(Modifier.weight(1f))
@@ -443,26 +443,23 @@ fun LedgerScreen(
  * 只回传 String 会丢掉选区与组合信息，表现为「引号没打出来，光标还往前跳」。
  * 用 TextFieldValue 保管文本 + 选区，输入法状态就不会被我们的重组冲掉。
  */
+/**
+ * 受控文本框：状态直接由调用方的 TextFieldValue 保管。
+ *
+ * 之前用「本地 remember + 回写 String」，中文输入法打全角引号（“）时会因为
+ * 组合态被重建而丢字、光标回跳；把 TextFieldValue 一路托管给上层就不会。
+ */
 @Composable
 private fun DraftTextField(
     label: String,
-    initial: String,
-    onValue: (String) -> Unit,
+    value: TextFieldValue,
+    onValue: (TextFieldValue) -> Unit,
     singleLine: Boolean = true,
     minLines: Int = 1
 ) {
-    var tv by remember { mutableStateOf(TextFieldValue(initial, TextRange(initial.length))) }
-    LaunchedEffect(initial) {
-        if (tv.text != initial) {
-            tv = tv.copy(text = initial, selection = TextRange(initial.length))
-        }
-    }
     OutlinedTextField(
-        value = tv,
-        onValueChange = { next ->
-            tv = next
-            onValue(next.text)
-        },
+        value = value,
+        onValueChange = onValue,
         label = { Text(label) },
         singleLine = singleLine,
         minLines = minLines,
@@ -511,21 +508,21 @@ private fun LedgerFormFields(
         Spacer(Modifier.height(Spacing.itemGap))
         DraftTextField(
             label = "字段名（如 手机号 / B站 UID）",
-            initial = draft.fieldName,
+            value = draft.fieldName,
             onValue = { draft.fieldName = it },
             singleLine = true,
         )
         Spacer(Modifier.height(Spacing.itemGap))
         DraftTextField(
             label = "值（原样抄，别整理成结论）",
-            initial = draft.value,
+            value = draft.value,
             onValue = { draft.value = it },
             minLines = 3,
         )
         Spacer(Modifier.height(Spacing.itemGap))
         DraftTextField(
             label = "出处（URL / 页面标题 / 文件名）",
-            initial = draft.sourceUrl,
+            value = draft.sourceUrl,
             onValue = { draft.sourceUrl = it },
             singleLine = true,
         )
@@ -578,14 +575,14 @@ private fun LedgerFormFields(
         Spacer(Modifier.height(Spacing.itemGap))
         DraftTextField(
             label = "标签，逗号分隔",
-            initial = draft.tags,
+            value = draft.tags,
             onValue = { draft.tags = it },
             singleLine = true,
         )
         Spacer(Modifier.height(Spacing.itemGap))
         DraftTextField(
             label = "备注（这条能推出什么 / 还差什么）",
-            initial = draft.note,
+            value = draft.note,
             onValue = { draft.note = it },
             minLines = 2,
         )
@@ -619,14 +616,14 @@ private fun LedgerFormFields(
 internal fun LedgerDraft.toRecord(): LedgerRecord = LedgerRecord(
     id = "",
     kind = kind,
-    fieldName = fieldName,
-    value = value,
-    sourceUrl = sourceUrl,
+    fieldName = fieldName.text,
+    value = value.text,
+    sourceUrl = sourceUrl.text,
     grade = grade,
     confidence = confidence,
     status = status,
     tags = tagList,
-    note = note,
+    note = note.text,
     shotPath = shotPath,
     sha256 = sha256,
     accountRef = accountRef
@@ -634,15 +631,15 @@ internal fun LedgerDraft.toRecord(): LedgerRecord = LedgerRecord(
 
 internal fun LedgerDraft.reset() {
     kind = RecordKind.ACCOUNT
-    fieldName = ""
-    value = ""
-    sourceUrl = ""
+    fieldName = TextFieldValue("")
+    value = TextFieldValue("")
+    sourceUrl = TextFieldValue("")
     letter = "B"
     digit = "2"
     confidence = Confidence.MEDIUM
     status = RecordStatus.PENDING
-    tags = ""
-    note = ""
+    tags = TextFieldValue("")
+    note = TextFieldValue("")
     shotPath = ""
     shotName = ""
     sha256 = ""

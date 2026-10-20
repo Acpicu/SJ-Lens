@@ -341,7 +341,7 @@ fun PlatformWebView(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.textMuted
                     )
-                    listOf(0 to "关", 3 to "3天", 7 to "7天", 14 to "14天").forEach { (days, label) ->
+                    listOf(0 to "关", 1 to "每天", 3 to "3天", 7 to "7天", 14 to "14天").forEach { (days, label) ->
                         FilterChip(
                             selected = (account?.remindEveryDays ?: 0) == days,
                             onClick = {

@@ -51,6 +51,7 @@ class CheckService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
+        val baselineOnly = intent?.getBooleanExtra(EXTRA_BASELINE, false) ?: false
         if (CheckController.running) {
             stopSelf()
             return START_NOT_STICKY
@@ -62,7 +63,8 @@ class CheckService : Service() {
                 CheckController.execute(
                     context = this@CheckService,
                     persons = AppUiState.persons.toList(),
-                    includeWeb = true
+                    includeWeb = true,
+                    baselineOnly = baselineOnly
                 )
             } finally {
                 stopForegroundCompat()
@@ -94,10 +96,13 @@ class CheckService : Service() {
         private const val NOTIFICATION_ID = 2001
 
         /** @return 是否成功把服务拉起来；失败由调用方降级处理，绝不静默吞掉。 */
-        fun start(context: Context): Boolean = runCatching {
+        private const val EXTRA_BASELINE = "baseline_only"
+
+        fun start(context: Context, baselineOnly: Boolean = false): Boolean = runCatching {
             ContextCompat.startForegroundService(
                 context,
                 Intent(context, CheckService::class.java)
+                    .putExtra(EXTRA_BASELINE, baselineOnly)
             )
             true
         }.getOrDefault(false)

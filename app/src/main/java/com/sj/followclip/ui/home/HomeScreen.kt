@@ -111,7 +111,8 @@ fun HomeScreen(
             checking = checking,
             status = status,
             onToggleManage = { manageMode = !manageMode },
-            onCheckAll = { performCheck(includeWeb = true) }
+            onCheckAll = { performCheck(includeWeb = true) },
+            onBaseline = { CheckController.startBaseline(context, persons) }
         )
 
         // 进度条占位：高度固定，检查开始/结束都不会让下面的卡片跳一下。
@@ -349,7 +350,8 @@ private fun AppHeader(
     checking: Boolean,
     status: String,
     onToggleManage: () -> Unit,
-    onCheckAll: () -> Unit
+    onCheckAll: () -> Unit,
+    onBaseline: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -411,8 +413,8 @@ private fun AppHeader(
         TextButton(onClick = onCheckAll, enabled = !checking) {
             Text(if (checking) "…" else "检查")
         }
-        TextButton(onClick = onToggleManage) {
-            Text(if (manageMode) "完成" else "管理")
+        TextButton(onClick = onBaseline, enabled = !checking) {
+            Text("基线")
         }
     }
 }
