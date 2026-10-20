@@ -70,6 +70,13 @@ fun SettingsScreen(
     var confirmExport by remember { mutableStateOf(false) }
 
     val cacheSize = remember(tick) { CacheCleaner.sizeBytes(context) }
+    val versionText = remember {
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            val code = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+            "${info.versionName} ($code)"
+        }.getOrDefault("2.8.0")
+    }
     val biliLogged = remember(tick) { BiliSource.isLoggedIn() }
     val douyinLogged = remember(tick) { WebCookies.douyinLoggedIn() }
     val pendingCount = PendingStore.items.size
@@ -245,7 +252,7 @@ fun SettingsScreen(
                                     context.startActivity(
                                         android.content.Intent(
                                             android.content.Intent.ACTION_VIEW,
-                                            android.net.Uri.parse("https://github.com/RadarPika")
+                                            android.net.Uri.parse("https://github.com/Acupicu")
                                         )
                                     )
                                 }
@@ -265,13 +272,13 @@ fun SettingsScreen(
                         Spacer(Modifier.width(Spacing.gridGap))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "hacker-Xiong",
+                                text = "HackerPI",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(Modifier.height(Spacing.tinyGap))
                             Text(
-                                text = "github.com/RadarPika",
+                                text = "github.com/Acupicu",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -285,15 +292,12 @@ fun SettingsScreen(
 
                     Spacer(Modifier.height(Spacing.gridGap))
 
-                    // 闪电标识：纯矢量折线，任何尺寸都清晰
+                    // 开源致敬：不放花哨图形，一句定位就够了
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        BoltMarkGlow(size = 34.dp)
-                        Spacer(Modifier.width(Spacing.gridGap))
                         Text(
-                            text = "Volt",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            letterSpacing = 1.sp
+                            text = "开源 · 自托管 · 零第三方 SDK",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.textMuted
                         )
                     }
 
@@ -302,6 +306,12 @@ fun SettingsScreen(
                     ActionRow(
                         title = "SJ Lens",
                         summary = "红队情报工具 · 目标线索、数据本与交档简报，数据只存本机"
+                    )
+                    Spacer(Modifier.height(Spacing.tinyGap))
+                    Text(
+                        text = "版本 $versionText",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(

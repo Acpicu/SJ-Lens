@@ -1,6 +1,6 @@
 # SJ Lens
 
-[![release](https://img.shields.io/badge/release-v2.1.0-22D3EE)](https://github.com/RadarPika/SJ-Lens/releases)
+[![release](https://img.shields.io/badge/release-v2.8.0-22D3EE)](https://github.com/Acupicu/SJ-Lens/releases)
 [![license](https://img.shields.io/badge/license-MIT-3B9EFF)](LICENSE)
 
 安卓端红队情报工具：围绕一个**目标**收集公开线索、登记成结构化记录、按证据强度交档。
@@ -170,7 +170,7 @@ app/src/main/java/com/sj/followclip/
 
 ## 致谢
 
-- 开发者：[hacker-Xiong](https://github.com/RadarPika)
+- 开发者：[hacker-Xiong](https://github.com/Acupicu)
 - 图标：单字母 `S`，蓝青渐变
 
 ## License
