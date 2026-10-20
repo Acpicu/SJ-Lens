@@ -204,6 +204,7 @@ private fun ResultRow(item: PendingItem, onClick: () -> Unit) {
                         when (item.kind) {
                             "DYNAMIC" -> "动态"
                             "PROFILE" -> "主页变化"
+                            "IMAGE" -> "图文"
                             else -> "作品"
                         }
                     )
@@ -238,6 +239,7 @@ private fun TextResultCard(item: PendingItem, onClick: () -> Unit) {
                     text = when (item.kind) {
                         "PROFILE" -> "主页变化"
                         "DYNAMIC" -> "动态"
+                        "IMAGE" -> "图文作品"
                         else -> "文字更新"
                     },
                     style = MaterialTheme.typography.labelSmall,

@@ -128,16 +128,18 @@ object DouyinRenderChecker {
         val known = VideoSnapshotStore.load(activity, accountId, "dy")
         val fresh = if (known.isEmpty()) emptyList() else videos.keys.filter { it !in known }
         VideoSnapshotStore.merge(activity, accountId, videos.keys.toList(), "dy")
-        return fresh.map { id ->
+        return fresh.map { raw ->
+            val isNote = raw.startsWith("note_")
+            val id = raw.removePrefix("note_")
             PendingItem(
                 bvid = id,
-                title = "新作品 · 视频 $id",
+                title = if (isNote) "新图文 · $id" else "新作品 · 视频 $id",
                 personId = personId,
                 personName = personName,
                 platform = platform,
                 coverUrl = videos[id],
                 link = "https://www.douyin.com/video/$id",
-                kind = "VIDEO",
+                kind = if (isNote) "IMAGE" else "VIDEO",
                 foundAt = System.currentTimeMillis()
             )
         }
@@ -147,10 +149,12 @@ object DouyinRenderChecker {
         (function(){
           try{
             var out = [], seen = {};
-            var nodes = document.querySelectorAll('a[href*="/video/"]');
+            var nodes = document.querySelectorAll('a[href*="/video/"],a[href*="/note/"]');
             for (var i = 0; i < nodes.length && out.length < 40; i++) {
               var a = nodes[i];
-              var m = (a.getAttribute('href') || '').match(/\/video\/([0-9]{6,})/);
+              var href = a.getAttribute('href') || '';
+              var isNote = href.indexOf('/note/') >= 0;
+              var m = href.match(/\/(?:video|note)\/([0-9]{6,})/);
               if (!m) continue;
               var id = m[1];
               if (seen[id]) continue;
@@ -158,7 +162,7 @@ object DouyinRenderChecker {
               var card = a.closest('li') || a.parentElement || a;
               var img = card.querySelector ? card.querySelector('img') : null;
               var cover = img ? (img.getAttribute('src') || '') : '';
-              out.push({ id: id, cover: cover });
+              out.push({ id: (isNote ? 'note_' : '') + id, cover: cover });
             }
             return JSON.stringify(out);
           }catch(e){ return '[]'; }
