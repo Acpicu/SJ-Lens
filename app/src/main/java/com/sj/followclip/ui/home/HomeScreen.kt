@@ -372,7 +372,8 @@ private fun AppHeader(
                                 brush = Brush.linearGradient(
                                     listOf(
                                         MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.secondary
+                                        MaterialTheme.colorScheme.secondary,
+                                        MaterialTheme.colorScheme.tertiary
                                     )
                                 )
                             )

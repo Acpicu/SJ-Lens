@@ -40,6 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sj.followclip.data.local.Admiralty
@@ -228,12 +231,10 @@ fun LedgerScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(Spacing.cardPadding)) {
-                        OutlinedTextField(
-                            value = quickText,
-                            onValueChange = { quickText = it },
-                            label = { Text("一句话登记（先记下，再补出处）") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                        DraftTextField(
+                            label = "一句话登记（先记下，再补出处）",
+                            initial = quickText,
+                            onValue = { quickText = it }
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
@@ -435,6 +436,40 @@ fun LedgerScreen(
 }
 
 /** 表单字段本体。登记与编辑共用一份，避免两处逻辑走样。 */
+/**
+ * 受控文本框。
+ *
+ * 为什么不用普通 String 版本：中文输入法打全角标点（“”）时是一段「组合态」，
+ * 只回传 String 会丢掉选区与组合信息，表现为「引号没打出来，光标还往前跳」。
+ * 用 TextFieldValue 保管文本 + 选区，输入法状态就不会被我们的重组冲掉。
+ */
+@Composable
+private fun DraftTextField(
+    label: String,
+    initial: String,
+    onValue: (String) -> Unit,
+    singleLine: Boolean = true,
+    minLines: Int = 1
+) {
+    var tv by remember { mutableStateOf(TextFieldValue(initial, TextRange(initial.length))) }
+    LaunchedEffect(initial) {
+        if (tv.text != initial) {
+            tv = tv.copy(text = initial, selection = TextRange(initial.length))
+        }
+    }
+    OutlinedTextField(
+        value = tv,
+        onValueChange = { next ->
+            tv = next
+            onValue(next.text)
+        },
+        label = { Text(label) },
+        singleLine = singleLine,
+        minLines = minLines,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
 @Composable
 private fun LedgerFormFields(
     draft: LedgerDraft,
@@ -474,27 +509,25 @@ private fun LedgerFormFields(
         }
 
         Spacer(Modifier.height(Spacing.itemGap))
-        OutlinedTextField(
-            value = draft.fieldName,
-            onValueChange = { draft.fieldName = it },
-            label = { Text("字段名（如 手机号 / B站 UID / 常去健身房）") },
+        DraftTextField(
+            label = "字段名（如 手机号 / B站 UID）",
+            initial = draft.fieldName,
+            onValue = { draft.fieldName = it },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(Spacing.itemGap))
-        OutlinedTextField(
-            value = draft.value,
-            onValueChange = { draft.value = it },
-            label = { Text("值（原样抄，别整理成结论）") },
-            modifier = Modifier.fillMaxWidth()
+        DraftTextField(
+            label = "值（原样抄，别整理成结论）",
+            initial = draft.value,
+            onValue = { draft.value = it },
+            minLines = 3,
         )
         Spacer(Modifier.height(Spacing.itemGap))
-        OutlinedTextField(
-            value = draft.sourceUrl,
-            onValueChange = { draft.sourceUrl = it },
-            label = { Text("出处（URL / 页面标题 / 文件名）") },
+        DraftTextField(
+            label = "出处（URL / 页面标题 / 文件名）",
+            initial = draft.sourceUrl,
+            onValue = { draft.sourceUrl = it },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(Spacing.itemGap))
@@ -543,19 +576,18 @@ private fun LedgerFormFields(
         )
 
         Spacer(Modifier.height(Spacing.itemGap))
-        OutlinedTextField(
-            value = draft.tags,
-            onValueChange = { draft.tags = it },
-            label = { Text("标签，逗号分隔") },
+        DraftTextField(
+            label = "标签，逗号分隔",
+            initial = draft.tags,
+            onValue = { draft.tags = it },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(Spacing.itemGap))
-        OutlinedTextField(
-            value = draft.note,
-            onValueChange = { draft.note = it },
-            label = { Text("备注（这条能推出什么 / 还差什么）") },
-            modifier = Modifier.fillMaxWidth()
+        DraftTextField(
+            label = "备注（这条能推出什么 / 还差什么）",
+            initial = draft.note,
+            onValue = { draft.note = it },
+            minLines = 2,
         )
 
         if (draft.sha256.isNotBlank()) {
