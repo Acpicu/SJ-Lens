@@ -367,21 +367,21 @@ private fun AppHeader(
                 text = if (manageMode) {
                     buildAnnotatedString { append("管理文件夹") }
                 } else {
+                    // 一条渐变铺满整串字：开头是品牌色，往右逐渐褪成正常文字色
                     buildAnnotatedString {
                         withStyle(
                             SpanStyle(
                                 brush = Brush.linearGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.secondary,
-                                        MaterialTheme.colorScheme.tertiary
+                                    colorStops = arrayOf(
+                                        0.00f to MaterialTheme.colorScheme.primary,
+                                        0.30f to MaterialTheme.colorScheme.secondary,
+                                        0.55f to MaterialTheme.colorScheme.tertiary,
+                                        0.85f to MaterialTheme.colorScheme.onSurface,
+                                        1.00f to MaterialTheme.colorScheme.onSurface
                                     )
                                 )
                             )
-                        ) { append("SJ") }
-                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
-                            append(" LENS")
-                        }
+                        ) { append("SJ LENS") }
                     }
                 },
                 style = MaterialTheme.typography.headlineMedium
