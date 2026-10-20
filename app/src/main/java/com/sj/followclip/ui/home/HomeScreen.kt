@@ -29,6 +29,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -358,19 +362,28 @@ private fun AppHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(com.sj.followclip.R.drawable.ic_launcher_foreground),
-                    contentDescription = null,
-                    modifier = Modifier.size(26.dp)
-                )
-                Spacer(Modifier.width(Spacing.itemGap))
-                Text(
-                    text = if (manageMode) "管理文件夹" else "SJ LENS",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            Text(
+                text = if (manageMode) {
+                    buildAnnotatedString { append("管理文件夹") }
+                } else {
+                    buildAnnotatedString {
+                        withStyle(
+                            SpanStyle(
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.secondary
+                                    )
+                                )
+                            )
+                        ) { append("SJ") }
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
+                            append(" LENS")
+                        }
+                    }
+                },
+                style = MaterialTheme.typography.headlineMedium
+            )
             Spacer(Modifier.height(Spacing.tinyGap))
             Text(
                 text = when {

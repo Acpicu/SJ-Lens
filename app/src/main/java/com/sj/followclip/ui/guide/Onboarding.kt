@@ -172,6 +172,13 @@ fun OnboardingScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 )
             }
             item { GuideContent() }
+            item {
+                Spacer(Modifier.height(Spacing.sectionGap))
+                androidx.compose.material3.Button(
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("开始使用") }
+            }
         }
     }
 }

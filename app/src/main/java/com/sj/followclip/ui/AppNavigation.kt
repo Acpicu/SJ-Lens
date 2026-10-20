@@ -14,8 +14,6 @@ import com.sj.followclip.data.check.CheckController
 import com.sj.followclip.data.local.PendingStore
 import com.sj.followclip.data.work.CheckScheduler
 import com.sj.followclip.data.work.CheckWorker
-import com.sj.followclip.ui.common.BatteryGuideDialog
-import com.sj.followclip.ui.common.shouldShowBatteryGuide
 import com.sj.followclip.util.Notifications
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -52,7 +50,6 @@ import com.sj.followclip.ui.detail.PersonDetailScreen
 import com.sj.followclip.ui.detail.BiliLoginScreen
 import com.sj.followclip.ui.detail.PlatformVideosScreen
 import com.sj.followclip.ui.detail.PlatformWebView
-import com.sj.followclip.ui.guide.OnboardingDialog
 import com.sj.followclip.ui.guide.OnboardingScreen
 import com.sj.followclip.ui.guide.markOnboardingShown
 import com.sj.followclip.ui.guide.shouldShowOnboarding
@@ -137,24 +134,6 @@ fun AppNavigation() {
     val context = LocalContext.current
 
     AppUiState.init(context)
-
-    // 首次启动弹一次使用引导（只弹一次；设置里随时能重开）
-    var showOnboarding by remember { mutableStateOf(shouldShowOnboarding(context)) }
-    if (showOnboarding) {
-        OnboardingDialog(
-            onDismiss = {
-                markOnboardingShown(context)
-                showOnboarding = false
-            }
-        )
-    }
-
-    // 首次启动弹一次耗电管理引导（只弹一次）
-    var showBatteryGuide by remember { mutableStateOf(shouldShowBatteryGuide(context)) }
-    if (showBatteryGuide) {
-        BatteryGuideDialog(onDismiss = { showBatteryGuide = false })
-    }
-
     // 自动检查排期：进应用排一次即可，KEEP 策略不会重置已有计时
     LaunchedEffect(Unit) {
         Notifications.ensureChannel(context)
@@ -248,7 +227,8 @@ fun AppNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.HOME,
+            // 首次启动直接进入引导页，而不是盖一层弹窗
+            startDestination = if (remember { shouldShowOnboarding(context) }) Routes.GUIDE else Routes.HOME,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Routes.HOME) {
@@ -288,7 +268,16 @@ fun AppNavigation() {
             }
 
             composable(Routes.GUIDE) {
-                OnboardingScreen(onBack = { navController.popBackStackSafely() })
+                OnboardingScreen(
+                    onBack = {
+                        markOnboardingShown(context)
+                        if (navController.previousBackStackEntry == null) {
+                            navController.navigate(Routes.HOME) { popUpTo(0) { inclusive = true } }
+                        } else {
+                            navController.popBackStackSafely()
+                        }
+                    }
+                )
             }
 
             composable(Routes.EXPOSURE_AUDIT) {

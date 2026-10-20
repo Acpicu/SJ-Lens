@@ -458,7 +458,7 @@ private fun LedgerFormFields(
         if (draft.kind == RecordKind.ACCOUNT && accounts.isNotEmpty()) {
             Spacer(Modifier.height(Spacing.tinyGap))
             Text(
-                text = "绑定到哪个号（可选）",
+                text = "这条事实属于哪个平台号（可选，绑了就能从账号反查记录）",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -560,7 +560,7 @@ private fun LedgerFormFields(
 
         if (draft.sha256.isNotBlank()) {
             Text(
-                text = "SHA-256 ${draft.sha256.take(16)}…",
+                text = "截图指纹 ${draft.sha256.take(16)}…（证明这张图交档后没被替换过）",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.textMuted
             )
