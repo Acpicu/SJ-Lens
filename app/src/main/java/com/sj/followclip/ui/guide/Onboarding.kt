@@ -28,6 +28,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,9 +108,23 @@ fun OnboardingScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val pagerState = rememberPagerState(pageCount = { pageCount })
     val current = pagerState.currentPage
 
+    var notifyGranted by remember {
+        androidx.compose.runtime.mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
     val notifyPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
+    ) { granted ->
+        notifyGranted = granted
+        android.widget.Toast.makeText(
+            context,
+            if (granted) "通知已开启" else "没开启通知，检查完了不会有横幅提醒",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
 
     Scaffold(
         modifier = modifier,
@@ -160,6 +181,16 @@ fun OnboardingScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     }
                 } else {
                     NotificationPage(
+                        granted = notifyGranted,
+                        onOpenSystemSettings = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        },
                         onAllow = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -202,7 +233,12 @@ fun OnboardingScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun NotificationPage(onAllow: () -> Unit, onBatterySettings: () -> Unit) {
+private fun NotificationPage(
+    granted: Boolean,
+    onAllow: () -> Unit,
+    onOpenSystemSettings: () -> Unit,
+    onBatterySettings: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize()) {
         Spacer(Modifier.height(Spacing.sectionGap))
         Text(
@@ -234,8 +270,19 @@ private fun NotificationPage(onAllow: () -> Unit, onBatterySettings: () -> Unit)
             }
         }
         Spacer(Modifier.height(Spacing.gridGap))
+        Text(
+            text = if (granted) "通知：已开启（系统里可随时关）" else "通知：未开启",
+            style = MaterialTheme.typography.labelMedium,
+            color = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+        )
+        Spacer(Modifier.height(Spacing.gridGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = onAllow) { Text("允许通知") }
+            if (granted) {
+                // 已授权时系统不会再弹窗，点了没反应最容易被当成"点不动"——直接给系统设置入口
+                Button(onClick = onOpenSystemSettings) { Text("通知设置") }
+            } else {
+                Button(onClick = onAllow) { Text("允许通知") }
+            }
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onBatterySettings) { Text("省电设置") }
         }
