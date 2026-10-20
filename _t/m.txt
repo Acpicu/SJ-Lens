@@ -1,6 +1,0 @@
-﻿chore: 精简仓库 + 视觉微调 (v3.0.2)
-
-- 删除 .vscode/ docs/ 与三个开发脚本(一键编译安装/一键截图/实时日志)及重新上传.ps1
-  仅保留: 源码 / gradle / README / CHANGELOG / PLAN / RELEASE_NOTES / LICENSE / 一键打包脚本
-- 调色: 强调色提亮, 侧壁加深, 描边更清晰
-- 卡片圆角 18 -> 20dp, 首页人物卡加细描边, 层次更清楚
