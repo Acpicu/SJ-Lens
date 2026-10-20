@@ -107,7 +107,11 @@ fun PersonCard(
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = RoundedCornerShape(Spacing.cardCorner),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        border = androidx.compose.foundation.BorderStroke(
+        width = Spacing.hairline,
+        color = MaterialTheme.colorScheme.outlineVariant
+    ),
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(Spacing.cardPadding)) {

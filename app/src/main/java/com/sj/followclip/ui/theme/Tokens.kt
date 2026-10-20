@@ -37,7 +37,7 @@ object Spacing {
     val gridGap = 12.dp
 
     /** 卡片圆角 */
-    val cardCorner = 18.dp
+    val cardCorner = 20.dp
 
     /** 区块之间 */
     val sectionGap = 24.dp
