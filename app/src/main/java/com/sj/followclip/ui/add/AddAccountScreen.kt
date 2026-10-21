@@ -99,9 +99,17 @@ fun AddAccountScreen(
                 Platform.entries.forEach { item ->
                         // 选 QQ空间 时把模板链接直接填好，用户只要补 QQ 号
                         val selectItem = {
+                            val wasQzone = platform == Platform.QQZONE
+                            val template = "https://user.qzone.qq.com/"
+                            // 切到别家时，把没补完的 QQ空间 模板清掉；自己填的内容不动
+                            if (wasQzone && item != Platform.QQZONE && link.trim() == template) {
+                                link = ""
+                            }
                             platform = item
-                            if (item == Platform.QQZONE && (link.isBlank() || link.startsWith("https://user.qzone.qq.com/"))) {
-                                link = "https://user.qzone.qq.com/"
+                            if (item == Platform.QQZONE &&
+                                (link.isBlank() || link.startsWith(template))
+                            ) {
+                                link = template
                             }
                         }
                     FilterChip(

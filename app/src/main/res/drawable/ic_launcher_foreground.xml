@@ -1,33 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  自适应图标前景：侦探剪影 + 放大镜，全部直线与正圆，小尺寸也认得出。
-  画布 108x108，安全区中央 72x72（18~90）。
-  配色：帽/机身浅灰蓝，帽带与镜圈用主题青蓝渐变。
--->
+<!-- 自适应图标前景：只有一顶侦探礼帽（帽带上有 S），全部直线造型。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
 
-    <!-- 帽檐（一条锐利的扁梯形） -->
-    <path
-        android:pathData="M22,50 L86,50 L80,57 L28,57 Z"
+    <!-- 帽檐 -->
+    <path android:pathData="M14,64 L94,64 L86,73 L22,73 Z"
         android:fillColor="#E6EDF5" />
 
     <!-- 帽冠（上窄下宽，顶边斜切） -->
-    <path
-        android:pathData="M37,50 L42,28 L70,25 L72,50 Z"
+    <path android:pathData="M34,64 L40,30 L68,26 L73,64 Z"
         android:fillColor="#E6EDF5" />
 
     <!-- 帽带 -->
-    <path
-        android:pathData="M38,44 L71.5,41.5 L72,48 L38.5,50 Z">
+    <path android:pathData="M35,53 L72,50 L72.6,61 L35.4,63 Z">
         <aapt:attr name="android:fillColor">
             <gradient android:type="linear"
-                android:startX="38" android:startY="46"
-                android:endX="72" android:endY="46">
+                android:startX="35" android:startY="56"
+                android:endX="72" android:endY="56">
                 <item android:offset="0.0" android:color="#3B9EFF" />
                 <item android:offset="1.0" android:color="#22D3EE" />
             </gradient>
@@ -35,35 +26,8 @@
     </path>
 
     <!-- 帽带上的 S（折线） -->
-    <path
-        android:pathData="M67,43.4 L61,43.9 L61,45.3 L66.4,44.9 L66.4,46.3 L60.4,46.8"
-        android:strokeWidth="1.7" android:strokeLineCap="square"
+    <path android:pathData="M66,53.2 L58,53.9 L58,56.2 L65,55.7 L65,58 L57,58.7"
+        android:strokeWidth="2.4" android:strokeLineCap="square"
         android:strokeLineJoin="miter" android:strokeColor="#0B1116"
         android:fillColor="#00000000" />
-
-    <!-- 放大镜：镜圈 + 斜柄（柄是直线） -->
-    <path
-        android:pathData="M42,63 L62,63 L62,83 L42,83 Z"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M39,61 L59,79 L55,84 L35,66 Z"
-        android:fillColor="#8FA3BC" />
-    <path
-        android:pathData="M52,58 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0"
-        android:strokeWidth="5"
-        android:strokeColor="#00000000"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M38,58 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0"
-        android:strokeWidth="5">
-        <aapt:attr name="android:strokeColor">
-            <gradient android:type="linear"
-                android:startX="38" android:startY="44"
-                android:endX="66" android:endY="72">
-                <item android:offset="0.0" android:color="#22D3EE" />
-                <item android:offset="1.0" android:color="#3B9EFF" />
-            </gradient>
-        </aapt:attr>
-    </path>
-
 </vector>
