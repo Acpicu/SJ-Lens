@@ -23,6 +23,7 @@ val Platform.dotColor: Color
         Platform.DOUYIN -> MaterialTheme.colorScheme.primary
         Platform.KUAISHOU -> MaterialTheme.colorScheme.tertiary
         Platform.BILI -> MaterialTheme.colorScheme.secondary
+        Platform.QQZONE -> MaterialTheme.colorScheme.tertiary
     }
 
 /** 间距与尺寸，全部是 4 的倍数。 */

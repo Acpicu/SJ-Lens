@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  自适应启动图标前景层：单个字母 S，居中，蓝青线性渐变。
-  背景为深灰蓝，见 res/values/colors.xml 的 ic_launcher_background。
-  画布 108x108，安全区为中心 72x72（18 至 90），字形收在安全区内。
-  minSdk 26，矢量图渐变在 API 24 起支持，可以放心用。
+  自适应启动图标前景：侦探剪影（礼帽 + 帽带上的 S），全直线锐利造型。
+  画布 108x108，安全区为中央 72x72（18~90），所有笔画收在安全区内。
+  颜色：帽/衣 深蓝灰，帽带与 S 用青蓝渐变，与界面主题同色系。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
@@ -12,22 +11,59 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- 帽檐 -->
     <path
-        android:pathData="M66,42 C66,36 60,33 54,33 C47,33 42,37 42,43 C42,49 48,51 54,53 C60,55 66,57 66,63 C66,69 60,73 54,73 C47,73 41,70 41,64"
-        android:strokeWidth="7"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000">
-        <!-- 蓝青渐变，从左上到右下 -->
-        <aapt:attr name="android:strokeColor">
+        android:pathData="M20,46 L88,46 L84,52 L24,52 Z"
+        android:fillColor="#DCE6F2" />
+
+    <!-- 帽冠（上窄下宽的梯形，顶边略斜） -->
+    <path
+        android:pathData="M36,46 L41,26 L69,24 L73,46 Z"
+        android:fillColor="#DCE6F2" />
+
+    <!-- 帽带 -->
+    <path
+        android:pathData="M37,40 L72,38 L72.6,44 L37.4,46 Z">
+        <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
-                android:startX="41"
-                android:startY="33"
-                android:endX="66"
-                android:endY="73">
+                android:startX="37" android:startY="42"
+                android:endX="72" android:endY="42">
                 <item android:offset="0.0" android:color="#3B9EFF" />
                 <item android:offset="1.0" android:color="#22D3EE" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 帽带上的 S（折线，不用曲线） -->
+    <path
+        android:pathData="M66,39.6 L61,39.9 L61,41.6 L66,41.3 L66,43 L61,43.3"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:strokeColor="#0B1116"
+        android:fillColor="#00000000" />
+
+    <!-- 面部（下巴收窄的六边形） -->
+    <path
+        android:pathData="M46,52 L64,52 L64,64 L55,70 L46,64 Z"
+        android:fillColor="#C3D1E2" />
+
+    <!-- 领口 / 大衣肩线 -->
+    <path
+        android:pathData="M30,88 L40,68 L48,74 L55,68 L62,74 L70,68 L80,88 Z"
+        android:fillColor="#8FA3BC" />
+
+    <!-- 领带（细长三角，和帽带同色） -->
+    <path
+        android:pathData="M52,70 L58,70 L56,84 L54,84 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="55" android:startY="70"
+                android:endX="55" android:endY="84">
+                <item android:offset="0.0" android:color="#22D3EE" />
+                <item android:offset="1.0" android:color="#3B9EFF" />
             </gradient>
         </aapt:attr>
     </path>

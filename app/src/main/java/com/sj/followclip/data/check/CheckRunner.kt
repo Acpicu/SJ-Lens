@@ -44,7 +44,11 @@ object CheckRunner {
         val httpJobs = if (includeWeb) {
             persons.flatMap { p ->
                 p.accounts
-                    .filter { it.platform != Platform.BILI && it.platform != Platform.KUAISHOU }
+                    .filter {
+                        it.platform != Platform.BILI &&
+                            it.platform != Platform.KUAISHOU &&
+                            it.platform != Platform.QQZONE      // QQ空间要登录，没有可匿名读的接口
+                    }
                     .filter { it.homepageUrl.isNotBlank() }
                     .map { p.id to it }
             }
@@ -214,6 +218,20 @@ object CheckRunner {
             results += ks.results
             items += ks.items
         } else if (includeWeb) {
+            // QQ空间：只能点开看，不做自动比对，避免给出"没有更新"的错觉
+            persons.forEach { person ->
+                person.accounts
+                    .filter { it.platform == Platform.QQZONE }
+                    .forEach { account ->
+                        results += AccountCheckResult(
+                            personId = person.id,
+                            accountId = account.id,
+                            accountLabel = account.displayTitle,
+                            platform = Platform.QQZONE,
+                            note = "QQ空间需登录，点开账号页查看；不做自动更新比对"
+                        )
+                    }
+            }
             // 后台没有窗口也能查：走分享落地页的 HTTP 直取（见 KuaishouHttpProbe）
             persons.forEach { person ->
                 person.accounts

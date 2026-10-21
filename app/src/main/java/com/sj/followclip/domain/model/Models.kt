@@ -15,7 +15,10 @@ enum class Platform(
 ) {
     DOUYIN("抖音", isExperimental = false, supportAutoCheck = true),
     KUAISHOU("快手", isExperimental = false, supportAutoCheck = false),
-    BILI("B站", isExperimental = false, supportAutoCheck = true)
+    BILI("B站", isExperimental = false, supportAutoCheck = true),
+
+    /** QQ空间：必须登录才能看，只能靠内嵌 WebView 打开官方页面（登录态在 WebView 内完成） */
+    QQZONE("QQ空间", isExperimental = false, supportAutoCheck = false)
 }
 
 enum class CheckMode { AUTO, MANUAL_CONFIRM }
