@@ -97,9 +97,16 @@ fun AddAccountScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.itemGap)) {
                 Platform.entries.forEach { item ->
+                        // 选 QQ空间 时把模板链接直接填好，用户只要补 QQ 号
+                        val selectItem = {
+                            platform = item
+                            if (item == Platform.QQZONE && (link.isBlank() || link.startsWith("https://user.qzone.qq.com/"))) {
+                                link = "https://user.qzone.qq.com/"
+                            }
+                        }
                     FilterChip(
                         selected = item == platform,
-                        onClick = { platform = item },
+                        onClick = { selectItem() },
                         label = { Text(item.displayName) }
                     )
                 }
@@ -125,7 +132,15 @@ fun AddAccountScreen(
                 label = { Text("主页链接") },
                 placeholder = { Text("把这个人${platform.displayName}的主页链接粘进来") },
                 minLines = 2,
-                supportingText = { Text("也可以在对应 App 里点分享、复制链接，再粘到这里") }
+                supportingText = {
+                    Text(
+                        if (platform == Platform.QQZONE) {
+                            "把链接最后补上 QQ 号，例如 https://user.qzone.qq.com/123456789"
+                        } else {
+                            "也可以在对应 App 里点分享、复制链接，再粘到这里"
+                        }
+                    )
+                }
             )
 
             if (hint != null) {
