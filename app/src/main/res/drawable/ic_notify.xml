@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- 通知栏小图标：白色礼帽剪影。Android 会整体染色，所以不用渐变。 -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <path android:pathData="M16,66 L92,66 L84,76 L24,76 Z" android:fillColor="#FFFFFF" />
-    <path android:pathData="M38,66 L41,30 L69,26 L71,66 Z" android:fillColor="#FFFFFF" />
-</vector>
