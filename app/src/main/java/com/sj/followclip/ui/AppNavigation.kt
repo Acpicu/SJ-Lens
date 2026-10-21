@@ -308,7 +308,19 @@ fun AppNavigation() {
                     person = AppUiState.findPerson(personId),
                     onBack = { navController.popBackStack() },
                     onAccountClick = { account ->
-                        navController.navigate(Routes.platformVideos(personId, account.id))
+                        if (account.platform == Platform.QQZONE) {
+                            // QQ空间在 WebView 里打不开（强依赖自家客户端），直接交给浏览器
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(account.homepageUrl)
+                                    )
+                                )
+                            }
+                        } else {
+                            navController.navigate(Routes.platformVideos(personId, account.id))
+                        }
                     },
                     onDeleteAccount = { accountId ->
                         AppUiState.removeAccount(personId, accountId)

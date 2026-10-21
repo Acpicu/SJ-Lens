@@ -295,21 +295,28 @@ fun SettingsScreen(
 
                     Spacer(Modifier.height(Spacing.gridGap))
 
-                    ActionRow(
-                        title = "SJ Lens",
-                        summary = "红队情报工具 · 目标线索、数据本与交档简报，数据只存本机"
-                    )
-                    Spacer(Modifier.height(Spacing.tinyGap))
-                    Text(
-                        text = "版本 $versionText",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.height(Spacing.gridGap))
-                    ActionRow(
-                        title = "内容来源",
-                        summary = "B站 走公开接口；抖音/快手 读网页渲染结果，不改动平台数据"
-                    )
+                    // 名片式第二行：软件名 + 版本
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "SJ",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(Modifier.width(Spacing.tinyGap))
+                        Text(
+                            text = "LENS",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            text = versionText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.textMuted
+                        )
+                    }
                 }
             }
         }

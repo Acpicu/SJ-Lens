@@ -1,33 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 自适应图标前景：只有一顶侦探礼帽（帽带上有 S），全部直线造型。 -->
+<!-- 自适应图标前景：一顶侦探礼帽。全部直线，单色 + 渐变帽带，小尺寸与通知栏都清晰。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
 
     <!-- 帽檐 -->
-    <path android:pathData="M14,64 L94,64 L86,73 L22,73 Z"
-        android:fillColor="#E6EDF5" />
+    <path android:pathData="M16,68 L92,68 L84,75 L24,75 Z" android:fillColor="#F2F7FC" />
 
-    <!-- 帽冠（上窄下宽，顶边斜切） -->
-    <path android:pathData="M34,64 L40,30 L68,26 L73,64 Z"
-        android:fillColor="#E6EDF5" />
+    <!-- 帽冠：更窄更高，顶部斜切出礼帽感 -->
+    <path android:pathData="M38,68 L41,34 L69,30 L71,68 Z" android:fillColor="#F2F7FC" />
 
     <!-- 帽带 -->
-    <path android:pathData="M35,53 L72,50 L72.6,61 L35.4,63 Z">
+    <path android:pathData="M39.3,56 L70.6,53.6 L71,64 L39.6,65.6 Z">
         <aapt:attr name="android:fillColor">
             <gradient android:type="linear"
-                android:startX="35" android:startY="56"
-                android:endX="72" android:endY="56">
+                android:startX="39" android:startY="60"
+                android:endX="71" android:endY="60">
                 <item android:offset="0.0" android:color="#3B9EFF" />
                 <item android:offset="1.0" android:color="#22D3EE" />
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- 帽带上的 S（折线） -->
-    <path android:pathData="M66,53.2 L58,53.9 L58,56.2 L65,55.7 L65,58 L57,58.7"
-        android:strokeWidth="2.4" android:strokeLineCap="square"
+    <!-- 帽带上的 S -->
+    <path android:pathData="M64.5,56.6 L57,57.2 L57,59.4 L63.6,59 L63.6,61.2 L56.4,61.8"
+        android:strokeWidth="2.2" android:strokeLineCap="square"
         android:strokeLineJoin="miter" android:strokeColor="#0B1116"
         android:fillColor="#00000000" />
 </vector>

@@ -83,7 +83,7 @@ object Notifications {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_CHECKING)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("SJ 正在检查 ${total} 个卡片的更新状态")
             .setContentText(
                 if (label.isBlank()) "$done / $safeTotal" else "$label · $done / $safeTotal"
@@ -124,7 +124,7 @@ object Notifications {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("检查报告已生成")
             .setContentText(if (added > 0) "本轮发现 $added 条变化，点开看明细" else "本轮没有新变化")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -164,7 +164,7 @@ object Notifications {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("有 $count 条新内容")
             .setContentText("点开看看是谁更新了")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -193,7 +193,7 @@ object Notifications {
         )
         val who = if (names.size == 1) names.first() else "${names.size} 个人"
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("该看看 $who 的日常了")
             .setContentText("点开跳到 App 里看最新内容")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
