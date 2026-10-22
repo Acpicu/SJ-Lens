@@ -57,6 +57,7 @@ import com.sj.followclip.ui.home.HomeScreen
 import com.sj.followclip.ui.ledger.LedgerOverviewScreen
 import com.sj.followclip.ui.ledger.LedgerReportScreen
 import com.sj.followclip.ui.ledger.LedgerScreen
+import com.sj.followclip.ui.ledger.RelationGraphScreen
 import com.sj.followclip.ui.osint.ExposureAuditScreen
 import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.settings.SettingsScreen
@@ -83,6 +84,7 @@ object Routes {
 
     /** 数据本 · 全部目标（从设置页 OSINT 区进） */
     const val LEDGER_ALL = "ledgerAll"
+    const val RELATION_GRAPH = "relationGraph"
 
     const val ARG_PERSON_ID = "personId"
     const val ARG_PLATFORM = "platform"
@@ -340,7 +342,8 @@ fun AppNavigation() {
                     personId = personId,
                     personName = AppUiState.findPerson(personId)?.remarkName.orEmpty(),
                     onBack = { navController.popBackStackSafely() },
-                    onOpenReport = { navController.navigate(Routes.report(personId)) }
+                    onOpenReport = { navController.navigate(Routes.report(personId)) },
+                    onOpenGraph = { navController.navigate(Routes.RELATION_GRAPH) }
                 )
             }
 
@@ -410,6 +413,10 @@ fun AppNavigation() {
                     )
                 }
             }
+
+        composable(Routes.RELATION_GRAPH) {
+            RelationGraphScreen(onBack = { navController.popBackStack() })
+        }
 
             composable(Routes.BILI_LOGIN) {
                 BiliLoginScreen(

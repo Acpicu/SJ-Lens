@@ -94,6 +94,7 @@ internal class LedgerDraft(record: LedgerRecord? = null) {
 fun LedgerScreen(
     personId: Long,
     personName: String,
+    onOpenGraph: () -> Unit = {},
     onBack: () -> Unit,
     onOpenReport: () -> Unit,
     modifier: Modifier = Modifier
@@ -200,6 +201,7 @@ fun LedgerScreen(
                         enabled = records.isNotEmpty(),
                         onClick = onOpenReport
                     ) { Text("报告") }
+                    TextButton(onClick = onOpenGraph) { Text("图谱") }
                     TextButton(onClick = { relationLauncher.launch(arrayOf("application/json", "text/plain")) }) {
                         Text("关系网")
                     }
