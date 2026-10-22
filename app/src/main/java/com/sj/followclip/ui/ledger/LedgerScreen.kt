@@ -149,6 +149,22 @@ fun LedgerScreen(
         }
     }
 
+    // 关系网（GuangXIW）导出的关系摘要：只取这个人的关系写进数据本
+    val relationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val text = runCatching {
+                context.contentResolver.openInputStream(uri)?.use {
+                    it.readBytes().toString(Charsets.UTF_8)
+                }
+            }.getOrNull().orEmpty()
+            val n = com.sj.followclip.data.local.RelationImport
+                .import(context, personId, personName, text)
+            hint = if (n > 0) "已导入 $n 条关系" else "这个人的关系摘要里没有内容"
+        }
+    }
+
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/markdown")
     ) { uri: Uri? ->
@@ -184,6 +200,9 @@ fun LedgerScreen(
                         enabled = records.isNotEmpty(),
                         onClick = onOpenReport
                     ) { Text("报告") }
+                    TextButton(onClick = { relationLauncher.launch(arrayOf("application/json", "text/plain")) }) {
+                        Text("关系网")
+                    }
                     TextButton(
                         enabled = records.isNotEmpty(),
                         onClick = {
