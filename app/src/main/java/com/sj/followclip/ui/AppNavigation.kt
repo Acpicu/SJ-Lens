@@ -252,7 +252,8 @@ fun AppNavigation() {
                 SettingsScreen(
                     onLoginBili = { navController.navigate(Routes.BILI_LOGIN) },
                     onOpenAudit = { navController.navigate(Routes.EXPOSURE_AUDIT) },
-                    onOpenLedger = { navController.navigate(Routes.LEDGER_ALL) }
+                    onOpenLedger = { navController.navigate(Routes.LEDGER_ALL) },
+                    onOpenGraph = { navController.navigate(Routes.RELATION_GRAPH) }
                 )
             }
 

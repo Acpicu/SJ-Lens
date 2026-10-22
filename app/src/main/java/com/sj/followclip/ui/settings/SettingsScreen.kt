@@ -57,6 +57,7 @@ fun SettingsScreen(
     onLoginBili: () -> Unit,
     onOpenAudit: () -> Unit,
     onOpenLedger: () -> Unit,
+    onOpenGraph: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -220,6 +221,13 @@ fun SettingsScreen(
                         summary = "所有目标的记录汇总：计数、冲突、缺口，可跨目标搜索并一键导出",
                         action = "打开",
                         onAction = onOpenLedger
+                    )
+
+                    ActionRow(
+                        title = "关系网图谱",
+                        summary = "看目标之间的关系；紧急时也能改关系与类型",
+                        action = "打开",
+                        onAction = onOpenGraph
                     )
                     Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
@@ -502,7 +510,8 @@ private fun SettingsScreenPreview() {
         SettingsScreen(
             onLoginBili = {},
             onOpenAudit = {},
-            onOpenLedger = {}
+            onOpenLedger = {},
+            onOpenGraph = {}
         )
     }
 }

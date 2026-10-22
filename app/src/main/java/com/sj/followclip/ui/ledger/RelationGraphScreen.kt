@@ -41,16 +41,21 @@ fun RelationGraphScreen(onBack: () -> Unit) {
     var selected by remember { mutableStateOf<String?>(null) }
 
     // 读取数据本里的关系
-    val rels = remember(persons.size) {
+    var tick by remember { mutableStateOf(0) }
+    val rels = remember(persons.size, tick) {
         val all = LedgerStore.all(context)
         persons.map { p ->
-            val list = all[p.id].orEmpty()
-                .filter { it.kind == RecordKind.RELATION }
-                .map { it.value.substringBefore("（").trim() to it.fieldName.removePrefix("关系·") }
+            val list = all[p.id].orEmpty().filter { it.kind == RecordKind.RELATION }
             p.remarkName.ifBlank { "未命名" } to list
         }
     }
+    var editing by remember { mutableStateOf<com.sj.followclip.data.local.LedgerRecord?>(null) }
+    val nameOf: (com.sj.followclip.data.local.LedgerRecord) -> String =
+        { it.value.substringBefore("（").trim() }
+    val typeOf: (com.sj.followclip.data.local.LedgerRecord) -> String =
+        { it.fieldName.removePrefix("关系·") }
     val current = rels.getOrNull(picked)
+    val centerName0 = current?.first ?: ""
 
     Scaffold(
         topBar = {
@@ -85,7 +90,8 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                 }
             }
 
-            val center = current?.first ?: ""
+            val centerName = current?.first ?: ""
+            val center = centerName
             val items = current?.second.orEmpty()
 
             Box(Modifier.fillMaxWidth().weight(1f)) {
@@ -97,7 +103,7 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                         items.forEachIndexed { i, _ ->
                             val a = -Math.PI / 2 + i * 2 * Math.PI / maxOf(1, items.size)
                             val p = Offset(c.x + (cos(a) * r).toFloat(), c.y + (sin(a) * r).toFloat())
-                            if ((tap - p).getDistance() < 46f) selected = items[i].first
+                            if ((tap - p).getDistance() < 46f) selected = nameOf(items[i])
                         }
                     }
                 }) {
@@ -111,8 +117,9 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                     items.forEachIndexed { i, item ->
                         val a = -Math.PI / 2 + i * 2 * Math.PI / maxOf(1, items.size)
                         val p = Offset(c.x + (cos(a) * r).toFloat(), c.y + (sin(a) * r).toFloat())
-                        drawLine(if (selected == item.first) brass else steel, c, p, strokeWidth = 3f)
-                        drawCircle(if (selected == item.first) brass else Color(0xFF8BA0B5), 20f, p)
+                        val on = selected == nameOf(item)
+                        drawLine(if (on) brass else steel, c, p, strokeWidth = 3f)
+                        drawCircle(if (on) brass else Color(0xFF8BA0B5), 20f, p)
                     }
                 }
                 // 中心名字
@@ -131,21 +138,70 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                     Text("这个人还没有关系记录。电脑端 GuangXIW 导出的摘要导入后会出现。",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 } else {
-                    items.forEach { (name, type) ->
+                    items.forEach { rec ->
+                        val nm = nameOf(rec); val tp = typeOf(rec)
                         Row(
-                            Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            Modifier.fillMaxWidth().padding(vertical = 5.dp)
+                                .pointerInput(rec.id) { detectTapGestures { editing = rec } },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(Modifier.size(7.dp).background(
-                                if (selected == name) Color(0xFFC8A96A) else Color(0xFF8AA2BD), CircleShape))
+                                if (selected == nm) Color(0xFFC8A96A) else Color(0xFF8AA2BD), CircleShape))
                             Spacer(Modifier.width(8.dp))
-                            Text(name, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                            Text(nm, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                             Spacer(Modifier.weight(1f))
-                            Text(type, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text(tp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text("改", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                         }
                     }
                 }
             }
         }
+    }
+
+    val target = editing
+    if (target != null) {
+        var vName by remember(target.id) { mutableStateOf(nameOf(target)) }
+        var vType by remember(target.id) { mutableStateOf(typeOf(target)) }
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text("修改关系") },
+            text = {
+                Column {
+                    OutlinedTextField(value = vName, onValueChange = { vName = it },
+                        label = { Text("关系人") }, singleLine = true)
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(value = vType, onValueChange = { vType = it },
+                        label = { Text("关系类型") }, singleLine = true)
+                    Spacer(Modifier.height(6.dp))
+                    Text("手机端只改这两项，强度和证据请在电脑端维护。",
+                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val me = persons.getOrNull(picked)
+                    if (me != null && vName.isNotBlank()) {
+                        val strength = Regex("\\(强度\\s*(\\d+)\\)").find(target.value)?.groupValues?.get(1) ?: "3"
+                        LedgerStore.update(context, me.id, target.copy(
+                            fieldName = "关系·" + vType.trim().ifBlank { "其他" },
+                            value = vName.trim() + "（强度 " + strength + "）"
+                        ))
+                    }
+                    editing = null; tick++
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        val me = persons.getOrNull(picked)
+                        if (me != null) LedgerStore.remove(context, me.id, target.id)
+                        editing = null; tick++
+                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { editing = null }) { Text("取消") }
+                }
+            }
+        )
     }
 }
