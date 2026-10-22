@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 自适应图标：渐变底 + 化学分解字形（PNG 前景，由 design/icon.html 渲染而来） -->
+<!-- 自适应图标：暗色底 + S 字形（回到最初的样式，由 design/icon.html 渲染） -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_background" />
+    <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
 </adaptive-icon>
