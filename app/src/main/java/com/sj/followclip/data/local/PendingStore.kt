@@ -21,17 +21,18 @@ data class PendingItem(
 )
 
 /**
- * 最近一轮检查的结果。
+ * 待确认的新内容。
  *
- * **只保留最近一次检查发现的新内容**，每次检查整体覆盖，用户不需要手动清理。
- * 这样「待确认」页永远只反映当前状态，不会堆成陈年旧货。
+ * 检查结果是**合并**进去的：新一轮发现的新内容追加到前面，旧里还没被用户看过的会保留，
+ * 避免「刚看到一条更新，下一秒刷新就没了」。上限 300 条，超出丢最旧的。
  *
  * 用 SnapshotStateList 承载，界面读它会自动重组；每次写入都落盘，杀进程不丢。
  */
 object PendingStore {
 
     private const val PREF = "pending_items"
-    private const val KEY_SEEN = "seen_count"
+    private const val KEY_SEEN_AT = "seen_at"
+    private const val MAX_ITEMS = 300
 
     val items = mutableStateListOf<PendingItem>()
 
@@ -54,18 +55,33 @@ object PendingStore {
         persist(context)
     }
 
-    /** 上次打开「最近检查」时已经看过的条数；用来算底部导航的未看角标。 */
-    fun seenCount(context: Context): Int =
-        context.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY_SEEN, 0)
-
-    /** 打开「最近检查」时调用：把当前条数记为已看。 */
-    fun markSeen(context: Context) {
-        context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-            .edit().putInt(KEY_SEEN, items.size).apply()
+    /** 合并：本轮新内容放最前，旧内容里未见过的保留，按 bvid 去重，最多 300 条。 */
+    fun merge(context: Context, incoming: List<PendingItem>) {
+        val old = items.toList()
+        val result = ArrayList<PendingItem>(incoming.size + old.size)
+        val seen = mutableSetOf<String>()
+        incoming.sortedByDescending { it.foundAt }.forEach { if (seen.add(it.bvid)) result.add(it) }
+        old.forEach { if (seen.add(it.bvid)) result.add(it) }
+        items.clear()
+        items.addAll(result.take(MAX_ITEMS))
+        persist(context)
     }
 
-    /** 未看条数。 */
-    fun unseenCount(context: Context): Int = (items.size - seenCount(context)).coerceAtLeast(0)
+    /** 上次打开「最近检查」的时间；早于它的条目算已看。 */
+    fun seenAt(context: Context): Long =
+        context.getSharedPreferences(PREF, Context.MODE_PRIVATE).getLong(KEY_SEEN_AT, 0L)
+
+    /** 打开「最近检查」时调用：把当前时间记为已看。 */
+    fun markSeen(context: Context) {
+        context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+            .edit().putLong(KEY_SEEN_AT, System.currentTimeMillis()).apply()
+    }
+
+    /** 未看条数：按时间戳算，合并后不会把旧条目重新算成未看。 */
+    fun unseenCount(context: Context): Int {
+        val at = seenAt(context)
+        return items.count { it.foundAt > at }
+    }
 
     fun clearAll(context: Context) {
         items.clear()

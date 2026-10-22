@@ -119,7 +119,8 @@ object CheckRunner {
                 val now = StoredProfile(
                     workCount = snapshot.workCount ?: -1,
                     nickname = snapshot.nickname,
-                    signature = snapshot.signature
+                    signature = snapshot.signature,
+                    avatarUrl = snapshot.avatarUrl.orEmpty()
                 )
                 val old = WebProfileStore.load(context, account.id)
                 val delta = WebProfileStore.diff(old, now)
@@ -148,6 +149,19 @@ object CheckRunner {
                     newItems += PendingItem(
                         bvid = "rename-${account.id}-${delta.renamedTo.hashCode()}",
                         title = "改名：${delta.renamedFrom} → ${delta.renamedTo}",
+                        personId = personId,
+                        personName = personName,
+                        platform = account.platform.name,
+                        coverUrl = snapshot.avatarUrl,
+                        link = snapshot.canonicalUrl,
+                        kind = "PROFILE",
+                        foundAt = System.currentTimeMillis()
+                    )
+                }
+                if (delta.avatarTo != null) {
+                    newItems += PendingItem(
+                        bvid = "avatar-${account.id}-${delta.avatarTo.hashCode()}",
+                        title = "换头像：${account.displayTitle}",
                         personId = personId,
                         personName = personName,
                         platform = account.platform.name,

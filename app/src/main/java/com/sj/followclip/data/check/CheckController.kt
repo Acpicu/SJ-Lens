@@ -108,7 +108,8 @@ object CheckController {
             PendingStore.clearAll(appContext)
             outcome.results.forEach { r -> AppUiState.setUnread(r.personId, r.accountId, 0) }
         } else {
-            PendingStore.replaceAll(appContext, outcome.items.sortedByDescending { it.foundAt })
+            // 合并而不是覆盖：用户还没看过的旧条目不能被这一轮冲掉
+            PendingStore.merge(appContext, outcome.items)
             outcome.results.forEach { r -> AppUiState.setUnread(r.personId, r.accountId, r.newCount) }
         }
 

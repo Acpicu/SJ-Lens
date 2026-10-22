@@ -8,6 +8,8 @@ data class StoredProfile(
     val workCount: Int = -1,
     val nickname: String = "",
     val signature: String = "",
+    /** 头像地址；换了头像就是换了头像，红队很关心 */
+    val avatarUrl: String = "",
     /** 上次成功抓取的时间戳，用于命中缓存 */
     val at: Long = 0L
 )
@@ -19,13 +21,15 @@ data class ProfileDelta(
     val renamedTo: String? = null,
     val bioFrom: String? = null,
     val bioTo: String? = null,
+    val avatarFrom: String? = null,
+    val avatarTo: String? = null,
     /** 第一次见到这个账号：只建基线，不报警 */
     val baseline: Boolean = false,
     /** 作品数变少了（删作品 / 改私密），同样值得记一笔 */
     val workRemoved: Int = 0
 ) {
     val hasChange: Boolean
-        get() = workAdded > 0 || workRemoved > 0 || renamedTo != null || bioTo != null
+        get() = workAdded > 0 || workRemoved > 0 || renamedTo != null || bioTo != null || avatarTo != null
 }
 
 /**
@@ -47,6 +51,7 @@ object WebProfileStore {
                 workCount = o.optInt("count", -1),
                 nickname = o.optString("nick"),
                 signature = o.optString("sig"),
+                avatarUrl = o.optString("avatar"),
                 at = o.optLong("at")
             )
         }.getOrNull()
@@ -58,6 +63,7 @@ object WebProfileStore {
                 .put("count", profile.workCount)
                 .put("nick", profile.nickname)
                 .put("sig", profile.signature)
+                .put("avatar", profile.avatarUrl)
                 .put("at", if (profile.at > 0L) profile.at else System.currentTimeMillis())
             context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
                 .edit().putString("p_$accountId", o.toString()).apply()
@@ -89,6 +95,9 @@ object WebProfileStore {
             old.nickname != now.nickname
         val bioChanged = old.signature.isNotBlank() && now.signature.isNotBlank() &&
             old.signature != now.signature
+        // 头像比对只看地址：先建过基线、且两次都有值才判定，避免头像加载失败造成误报
+        val avatarChanged = old.avatarUrl.isNotBlank() && now.avatarUrl.isNotBlank() &&
+            old.avatarUrl != now.avatarUrl
 
         return ProfileDelta(
             workAdded = added,
@@ -96,7 +105,9 @@ object WebProfileStore {
             renamedFrom = if (renamed) old.nickname else null,
             renamedTo = if (renamed) now.nickname else null,
             bioFrom = if (bioChanged) old.signature else null,
-            bioTo = if (bioChanged) now.signature else null
+            bioTo = if (bioChanged) now.signature else null,
+            avatarFrom = if (avatarChanged) old.avatarUrl else null,
+            avatarTo = if (avatarChanged) now.avatarUrl else null
         )
     }
 }
