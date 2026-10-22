@@ -58,6 +58,7 @@ import com.sj.followclip.ui.ledger.LedgerOverviewScreen
 import com.sj.followclip.ui.ledger.LedgerReportScreen
 import com.sj.followclip.ui.ledger.LedgerScreen
 import com.sj.followclip.ui.ledger.RelationGraphScreen
+import com.sj.followclip.ui.memo.QuickMemoScreen
 import com.sj.followclip.ui.osint.ExposureAuditScreen
 import com.sj.followclip.ui.preview.FakeData
 import com.sj.followclip.ui.settings.SettingsScreen
@@ -85,6 +86,7 @@ object Routes {
     /** 数据本 · 全部目标（从设置页 OSINT 区进） */
     const val LEDGER_ALL = "ledgerAll"
     const val RELATION_GRAPH = "relationGraph"
+    const val QUICK_MEMO = "quickMemo"
 
     const val ARG_PERSON_ID = "personId"
     const val ARG_PLATFORM = "platform"
@@ -253,7 +255,8 @@ fun AppNavigation() {
                     onLoginBili = { navController.navigate(Routes.BILI_LOGIN) },
                     onOpenAudit = { navController.navigate(Routes.EXPOSURE_AUDIT) },
                     onOpenLedger = { navController.navigate(Routes.LEDGER_ALL) },
-                    onOpenGraph = { navController.navigate(Routes.RELATION_GRAPH) }
+                    onOpenGraph = { navController.navigate(Routes.RELATION_GRAPH) },
+                    onOpenMemo = { navController.navigate(Routes.QUICK_MEMO) }
                 )
             }
 
@@ -419,6 +422,9 @@ fun AppNavigation() {
             RelationGraphScreen(onBack = { navController.popBackStack() })
         }
 
+            composable(Routes.QUICK_MEMO) {
+                QuickMemoScreen(onBack = { navController.popBackStack() })
+            }
             composable(Routes.BILI_LOGIN) {
                 BiliLoginScreen(
                     onBack = { navController.popBackStack() },

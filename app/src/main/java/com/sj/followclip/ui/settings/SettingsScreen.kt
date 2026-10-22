@@ -58,6 +58,7 @@ fun SettingsScreen(
     onOpenAudit: () -> Unit,
     onOpenLedger: () -> Unit,
     onOpenGraph: () -> Unit,
+    onOpenMemo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -223,6 +224,13 @@ fun SettingsScreen(
                         onAction = onOpenLedger
                     )
 
+                    ActionRow(
+                        title = "紧急速记",
+                        summary = "先记下来，再补录到数据本；未完成 / 已完成两栏",
+                        action = "打开",
+                        onAction = onOpenMemo
+                    )
+                    Spacer(Modifier.height(Spacing.gridGap))
                     ActionRow(
                         title = "关系网图谱",
                         summary = "看目标之间的关系；紧急时也能改关系与类型",
@@ -511,7 +519,8 @@ private fun SettingsScreenPreview() {
             onLoginBili = {},
             onOpenAudit = {},
             onOpenLedger = {},
-            onOpenGraph = {}
+            onOpenGraph = {},
+            onOpenMemo = {}
         )
     }
 }
