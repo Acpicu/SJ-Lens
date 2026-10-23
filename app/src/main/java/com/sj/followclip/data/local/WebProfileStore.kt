@@ -95,9 +95,13 @@ object WebProfileStore {
             old.nickname != now.nickname
         val bioChanged = old.signature.isNotBlank() && now.signature.isNotBlank() &&
             old.signature != now.signature
-        // 头像比对只看地址：先建过基线、且两次都有值才判定，避免头像加载失败造成误报
+        // 头像比对：先剔掉 ?xxxx 这种每次都变的签名参数，否则每轮都会被判成"换头像"
+        fun normAvatar(u: String): String {
+            val cut = u.indexOf('?')
+            return (if (cut >= 0) u.substring(0, cut) else u).substringAfterLast('/').trim()
+        }
         val avatarChanged = old.avatarUrl.isNotBlank() && now.avatarUrl.isNotBlank() &&
-            old.avatarUrl != now.avatarUrl
+            normAvatar(old.avatarUrl) != normAvatar(now.avatarUrl)
 
         return ProfileDelta(
             workAdded = added,

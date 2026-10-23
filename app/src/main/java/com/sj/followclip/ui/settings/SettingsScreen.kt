@@ -182,7 +182,7 @@ fun SettingsScreen(
                         summary = if (cacheSize < 512 * 1024) {
                             "当前没有需要清理的缓存"
                         } else {
-                            "网页缓存占 ${CacheCleaner.format(cacheSize)}（WebView 运行时会有几 MB 清不掉），清它不影响数据本、截图与登录"
+                            "占 ${CacheCleaner.format(cacheSize)}（其中几 MB 是 WebView 运行时，清不掉）；不影响数据本与登录"
                         },
                         action = if (cacheSize < 512 * 1024) null else "清理",
                         onAction = if (cacheSize < 512 * 1024) {
@@ -190,9 +190,8 @@ fun SettingsScreen(
                         } else {
                             {
                                 val freed = CacheCleaner.clear(context)
-                        val left = CacheCleaner.sizeBytes(context)
-                        importResult = "已清 ${CacheCleaner.format(freed)}" +
-                            (if (left > 512 * 1024) "，剩 ${CacheCleaner.format(left)}（WebView 运行时占用，清不掉）" else "")
+                        tick++
+                        importResult = "已清 ${CacheCleaner.format(freed)}"
                                 tick++
                                 importResult = "已清缓存"
                             }
