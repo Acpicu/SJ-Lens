@@ -51,6 +51,12 @@ object QuickMemoStore {
         if (i >= 0) { items[i] = items[i].copy(done = !items[i].done); persist(context) }
     }
 
+    /** 改时间：补录昨天的事就把这个调回去。 */
+    fun setAt(context: Context, id: String, at: Long) {
+        val i = items.indexOfFirst { it.id == id }
+        if (i >= 0) { items[i] = items[i].copy(at = at); persist(context) }
+    }
+
     fun remove(context: Context, id: String) {
         items.removeAll { it.id == id }
         persist(context)

@@ -30,6 +30,7 @@ fun QuickMemoScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { QuickMemoStore.init(context) }
     var draft by remember { mutableStateOf("") }
+    var dateFor by remember { mutableStateOf<com.sj.followclip.data.local.Memo?>(null) }
     val all = QuickMemoStore.items
     val todo = all.filter { !it.done }
     val done = all.filter { it.done }
@@ -49,6 +50,8 @@ fun QuickMemoScreen(onBack: () -> Unit) {
         )
     }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
+            val target2 = dateFor
+            if (target2 != null) MemoDateDialog(target2) { dateFor = null }
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
@@ -71,7 +74,7 @@ fun QuickMemoScreen(onBack: () -> Unit) {
                 items(todo, key = { it.id }) { m ->
                     MemoRow(m.text, m.at, false,
                         onClick = { QuickMemoStore.toggle(context, m.id) },
-                        onLong = { QuickMemoStore.remove(context, m.id) })
+                        onLong = { dateFor = m })
                 }
                 item { SectionTitle("已完成添加", done.size) }
                 if (done.isEmpty()) {
@@ -80,11 +83,48 @@ fun QuickMemoScreen(onBack: () -> Unit) {
                 items(done, key = { it.id }) { m ->
                     MemoRow(m.text, m.at, true,
                         onClick = { QuickMemoStore.toggle(context, m.id) },
-                        onLong = { QuickMemoStore.remove(context, m.id) })
+                        onLong = { dateFor = m })
                 }
             }
         }
     }
+}
+
+@Composable
+private fun MemoDateDialog(memo: com.sj.followclip.data.local.Memo,
+                           onDismiss: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val fmt = remember(memo.at) {
+        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+    }
+    var text by remember(memo.id) { mutableStateOf(fmt.format(java.util.Date(memo.at))) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("时间与操作") },
+        text = {
+            Column {
+                Text("改时间可以补录之前发生的事，格式 2026-10-21 14:30",
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val ts = runCatching { fmt.parse(text.trim())?.time }.getOrNull()
+                if (ts != null) QuickMemoStore.setAt(context, memo.id, ts)
+                onDismiss()
+            }) { Text("保存时间") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { QuickMemoStore.remove(context, memo.id); onDismiss() }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = onDismiss) { Text("取消") }
+            }
+        }
+    )
 }
 
 @Composable
@@ -128,4 +168,5 @@ private fun MemoRow(text: String, at: Long, done: Boolean, onClick: () -> Unit, 
             Text(t, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+
 }
