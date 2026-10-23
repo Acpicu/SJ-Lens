@@ -316,15 +316,34 @@ private fun openContent(context: Context, item: PendingItem) {
                 }
             }
         }
-        // 网页兜底永远放最后
+        // 网页兜底：主页地址 + 检查时记下的原始链接
+        when (item.platform) {
+            "DOUYIN" -> Regex("""/user/(MS4wLjAB[A-Za-z0-9_-]+)""").find(item.link)
+                ?.groupValues?.get(1)?.let { add("https://www.douyin.com/user/$it") }
+            "KUAISHOU" -> Regex("""/(?:fw/user|profile)/([A-Za-z0-9_-]+)""").find(item.link)
+                ?.groupValues?.get(1)?.let { add("https://www.kuaishou.com/profile/$it") }
+        }
         if (item.link.isNotBlank()) add(item.link)
         if (item.platform == "BILI") add("https://www.bilibili.com/video/${item.bvid}")
     }
 
-    candidates.forEach { target ->
-        val opened = runCatching {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
-        }.isSuccess
-        if (opened) return
+    // 网页地址优先：深链经常"启动了但页面空白"，网页至少能看到内容。
+    val web = candidates.filter { it.startsWith("http://") || it.startsWith("https://") }
+    val app = candidates.filter { !it.startsWith("http://") && !it.startsWith("https://") }
+
+    fun open(target: String): Boolean = runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+    }.isSuccess
+
+    web.forEach { if (open(it)) return }
+    app.forEach { if (open(it)) return }
+
+    // 兜底：连链接都没有时给一个平台主页，别让用户点了个空白
+    val fallback = when (item.platform) {
+        "DOUYIN" -> "https://www.douyin.com/"
+        "KUAISHOU" -> "https://www.kuaishou.com/"
+        "BILI" -> "https://www.bilibili.com/"
+        else -> null
     }
+    if (fallback != null) open(fallback)
 }
