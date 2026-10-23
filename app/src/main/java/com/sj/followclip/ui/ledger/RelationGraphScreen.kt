@@ -2,6 +2,7 @@ package com.sj.followclip.ui.ledger
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,23 +15,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sj.followclip.data.local.LedgerRecord
 import com.sj.followclip.data.local.LedgerStore
 import com.sj.followclip.data.local.RecordKind
 import com.sj.followclip.ui.state.AppUiState
-import com.sj.followclip.ui.theme.Spacing
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * 关系网图谱（手机端只读）：
- * 把每个人数据本里的 RELATION 记录抽成边，中心是当前目标，外圈是关系人。
- * 关系来源是 GuangXIW 导出的关系摘要，导入后即出现在这里。
+ * 关系网图谱（手机端）：
+ * 跟电脑端一个路子——圆形头像 + 名字写在圆里，超长名字省略，绝不溢出圆外。
+ * 关系数据来自数据本里的 RELATION 记录（由 GuangXIW 导出的关系摘要导入而来）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,37 +42,30 @@ fun RelationGraphScreen(onBack: () -> Unit) {
     val persons = AppUiState.persons
     var picked by remember { mutableStateOf(0) }
     var selected by remember { mutableStateOf<String?>(null) }
-
-    // 读取数据本里的关系
     var tick by remember { mutableStateOf(0) }
+    var editing by remember { mutableStateOf<LedgerRecord?>(null) }
+
     val rels = remember(persons.size, tick) {
         val all = LedgerStore.all(context)
         persons.map { p ->
-            val list = all[p.id].orEmpty().filter { it.kind == RecordKind.RELATION }
-            p.remarkName.ifBlank { "未命名" } to list
+            p.remarkName.ifBlank { "未命名" } to all[p.id].orEmpty().filter { it.kind == RecordKind.RELATION }
         }
     }
-    var editing by remember { mutableStateOf<com.sj.followclip.data.local.LedgerRecord?>(null) }
-    val nameOf: (com.sj.followclip.data.local.LedgerRecord) -> String =
-        { it.value.substringBefore("（").trim() }
-    val typeOf: (com.sj.followclip.data.local.LedgerRecord) -> String =
-        { it.fieldName.removePrefix("关系·") }
+    val nameOf: (LedgerRecord) -> String = { it.value.substringBefore("（").trim() }
+    val typeOf: (LedgerRecord) -> String = { it.fieldName.removePrefix("关系·") }
     val current = rels.getOrNull(picked)
-    val centerName0 = current?.first ?: ""
+    val centerName = current?.first ?: ""
+    val items = current?.second.orEmpty()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
-                    }
-                },
-                title = { Text("关系网", maxLines = 1) }
-            )
-        }
-    ) { pad ->
+    Scaffold(topBar = {
+        TopAppBar(
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            navigationIcon = {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
+            },
+            title = { Text("关系网", maxLines = 1) }
+        )
+    }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (rels.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -78,6 +74,7 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                 }
                 return@Column
             }
+
             // 目标切换
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -85,70 +82,69 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                     FilterChip(
                         selected = i == picked,
                         onClick = { picked = i; selected = null },
-                        label = { Text(p.remarkName.ifBlank { "未命名" }) }
+                        label = { Text(p.remarkName.ifBlank { "未命名" }, maxLines = 1) }
                     )
                 }
             }
 
-            val centerName = current?.first ?: ""
-            val center = centerName
-            val items = current?.second.orEmpty()
+            // 图：圆心 + 外圈，圆形节点，名字在圆里
+            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+                val w = maxWidth
+                val h = maxHeight
+                val cx = w / 2
+                val cy = h / 2
+                val radius = (if (w < h) w else h) * 0.32f
+                val positions = items.mapIndexed { i, rec ->
+                    val a = -Math.PI / 2 + i * 2 * Math.PI / (if (items.isEmpty()) 1 else items.size)
+                    Triple(rec, cx + (cos(a) * radius.value).dp, cy + (sin(a) * radius.value).dp)
+                }
 
-            Box(Modifier.fillMaxWidth().weight(1f)) {
-                Canvas(Modifier.fillMaxSize().pointerInput(items) {
-                    detectTapGestures { tap ->
-                        // 命中最外圈节点即选中
-                        val c = Offset(size.width / 2f, size.height / 2f)
-                        val r = minOf(size.width, size.height) * 0.34f
-                        items.forEachIndexed { i, _ ->
-                            val a = -Math.PI / 2 + i * 2 * Math.PI / maxOf(1, items.size)
-                            val p = Offset(c.x + (cos(a) * r).toFloat(), c.y + (sin(a) * r).toFloat())
-                            if ((tap - p).getDistance() < 46f) selected = nameOf(items[i])
-                        }
-                    }
-                }) {
-                    val c = Offset(size.width / 2f, size.height / 2f)
-                    val r = minOf(size.width, size.height) * 0.34f
-                    val brass = Color(0xFFC8A96A)
-                    val steel = Color(0xFF8AA2BD)
-                    // 中心
-                    drawCircle(Color(0xFF1B2027), 44f, c)
-                    drawCircle(brass, 44f, c, style = Stroke(2.5f))
-                    items.forEachIndexed { i, item ->
-                        val a = -Math.PI / 2 + i * 2 * Math.PI / maxOf(1, items.size)
-                        val p = Offset(c.x + (cos(a) * r).toFloat(), c.y + (sin(a) * r).toFloat())
-                        val on = selected == nameOf(item)
-                        drawLine(if (on) brass else steel, c, p, strokeWidth = 3f)
-                        drawCircle(if (on) brass else Color(0xFF8BA0B5), 20f, p)
+                Canvas(Modifier.fillMaxSize()) {
+                    positions.forEach { (rec, x, y) ->
+                        val on = selected == nameOf(rec)
+                        drawLine(
+                            color = if (on) Color(0xFFC8A96A) else Color(0xFF4A5561),
+                            start = Offset(size.width / 2f, size.height / 2f),
+                            end = Offset(x.toPx(), y.toPx()),
+                            strokeWidth = if (on) 3.5f else 2f
+                        )
                     }
                 }
-                // 中心名字
-                Text(
-                    text = center,
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
+
+                NodeBall(name = centerName, primary = true, highlight = true, modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = cx - 44.dp, y = cy - 44.dp))
+
+                positions.forEach { (rec, x, y) ->
+                    NodeBall(
+                        name = nameOf(rec),
+                        primary = false,
+                        highlight = selected == nameOf(rec),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset(x = x - 34.dp, y = y - 34.dp)
+                            .clickable { editing = rec }
+                    )
+                }
             }
 
             // 关系清单
             Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                 if (items.isEmpty()) {
-                    Text("这个人还没有关系记录。电脑端 GuangXIW 导出的摘要导入后会出现。",
+                    Text("这个人还没有关系记录。电脑端导出关系摘要后导入即可。",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 } else {
                     items.forEach { rec ->
                         val nm = nameOf(rec); val tp = typeOf(rec)
                         Row(
                             Modifier.fillMaxWidth().padding(vertical = 5.dp)
-                                .pointerInput(rec.id) { detectTapGestures { editing = rec } },
+                                .clickable { editing = rec },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(Modifier.size(7.dp).background(
                                 if (selected == nm) Color(0xFFC8A96A) else Color(0xFF8AA2BD), CircleShape))
                             Spacer(Modifier.width(8.dp))
-                            Text(nm, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                            Text(nm, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, maxLines = 1)
                             Spacer(Modifier.weight(1f))
                             Text(tp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                             Spacer(Modifier.width(6.dp))
@@ -175,7 +171,7 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                     OutlinedTextField(value = vType, onValueChange = { vType = it },
                         label = { Text("关系类型") }, singleLine = true)
                     Spacer(Modifier.height(6.dp))
-                    Text("手机端只改这两项，强度和证据请在电脑端维护。",
+                    Text("手机端只改这两项，强度和证据在电脑端维护。",
                         fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
@@ -183,7 +179,8 @@ fun RelationGraphScreen(onBack: () -> Unit) {
                 TextButton(onClick = {
                     val me = persons.getOrNull(picked)
                     if (me != null && vName.isNotBlank()) {
-                        val strength = Regex("\\(强度\\s*(\\d+)\\)").find(target.value)?.groupValues?.get(1) ?: "3"
+                        val strength = Regex("""\\(强度\\s*(\\d+)\\)""").find(target.value)
+                            ?.groupValues?.get(1) ?: "3"
                         LedgerStore.update(context, me.id, target.copy(
                             fieldName = "关系·" + vType.trim().ifBlank { "其他" },
                             value = vName.trim() + "（强度 " + strength + "）"
@@ -205,3 +202,32 @@ fun RelationGraphScreen(onBack: () -> Unit) {
         )
     }
 }
+
+/** 圆形节点：名字写在圆里，超长省略，字号随字数缩小一档。 */
+@Composable
+private fun NodeBall(name: String, primary: Boolean, highlight: Boolean, modifier: Modifier = Modifier) {
+    val size = if (primary) 88.dp else 68.dp
+    val bg = when {
+        highlight -> Color(0xFFC8A96A).copy(alpha = 0.22f)
+        primary -> Color(0xFF1B2027)
+        else -> Color(0xFF181D23)
+    }
+    val border = if (highlight || primary) Color(0xFFC8A96A) else Color(0xFF3A444F)
+    Box(
+        modifier = modifier.size(size).background(bg, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(Modifier.size(size).border(1.5.dp, border, CircleShape))
+        Text(
+            text = name,
+            color = if (primary || highlight) Color(0xFFE8E2D4) else Color(0xFFCFD4DC),
+            fontSize = if (primary) 13.sp else 11.sp,
+            fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal,
+            textAlign = TextAlign.Center,
+            maxLines = if (primary) 2 else 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
