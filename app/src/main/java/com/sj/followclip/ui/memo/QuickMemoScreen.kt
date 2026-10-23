@@ -105,7 +105,7 @@ private fun MemoDateDialog(memo: com.sj.followclip.data.local.Memo,
                            onDismiss: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val fmt = remember(memo.at) {
-        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
     }
     var text by remember(memo.id) { mutableStateOf(fmt.format(java.util.Date(memo.at))) }
     AlertDialog(
@@ -113,7 +113,7 @@ private fun MemoDateDialog(memo: com.sj.followclip.data.local.Memo,
         title = { Text("时间与操作") },
         text = {
             Column {
-                Text("改时间可以补录之前发生的事，格式 2026-10-21 14:30",
+                Text("改日期可以补录之前发生的事，格式 2026-10-21",
                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true)
@@ -158,7 +158,7 @@ private fun EmptyLine(text: String) {
 private fun MemoRow(text: String, at: Long, done: Boolean, onClick: () -> Unit, onLong: () -> Unit) {
     val t = remember(at) {
         val d = java.util.Date(at)
-        val f = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
+        val f = java.text.SimpleDateFormat("MM-dd", java.util.Locale.getDefault())
         f.format(d)
     }
     Row(
