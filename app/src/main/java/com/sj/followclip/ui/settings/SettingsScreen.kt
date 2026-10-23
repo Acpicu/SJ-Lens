@@ -182,7 +182,7 @@ fun SettingsScreen(
                         summary = if (cacheSize < 512 * 1024) {
                             "当前没有需要清理的缓存"
                         } else {
-                            "占 ${CacheCleaner.format(cacheSize)}（其中几 MB 是 WebView 运行时，清不掉）；不影响数据本与登录"
+                            "占 ${CacheCleaner.format(cacheSize)}"
                         },
                         action = if (cacheSize < 512 * 1024) null else "清理",
                         onAction = if (cacheSize < 512 * 1024) {
@@ -216,40 +216,6 @@ fun SettingsScreen(
             }
 
             item {
-                SectionTitle("OSINT")
-
-                SettingCard {
-                    ActionRow(
-                        title = "数据本 · 全部目标",
-                        summary = "所有目标的记录汇总：计数、冲突、缺口，可跨目标搜索并一键导出",
-                        action = "打开",
-                        onAction = onOpenLedger
-                    )
-
-                    ActionRow(
-                        title = "紧急速记",
-                        summary = "先记下来，再补录到数据本；未完成 / 已完成两栏",
-                        action = "打开",
-                        onAction = onOpenMemo
-                    )
-                    Spacer(Modifier.height(Spacing.gridGap))
-                    ActionRow(
-                        title = "关系网图谱",
-                        summary = "看目标之间的关系；紧急时也能改关系与类型",
-                        action = "打开",
-                        onAction = onOpenGraph
-                    )
-                    Spacer(Modifier.height(Spacing.gridGap))
-                    ActionRow(
-                        title = "关联度评估",
-                        summary = "填一个目标在各平台的公开资料，算「这几个号能不能被认定成同一个人」",
-                        action = "打开",
-                        onAction = onOpenAudit
-                    )
-                }
-            }
-
-            item {
                 SectionTitle("关于")
 
                 SettingCard {
@@ -262,7 +228,7 @@ fun SettingsScreen(
                                     context.startActivity(
                                         android.content.Intent(
                                             android.content.Intent.ACTION_VIEW,
-                                            android.net.Uri.parse("https://github.com/Acupicu")
+                                            android.net.Uri.parse("https://github.com/Acpicu")
                                         )
                                     )
                                 }
@@ -288,7 +254,7 @@ fun SettingsScreen(
                             )
                             Spacer(Modifier.height(Spacing.tinyGap))
                             Text(
-                                text = "github.com/Acupicu",
+                                text = "github.com/Acpicu",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -302,14 +268,6 @@ fun SettingsScreen(
 
                     Spacer(Modifier.height(Spacing.gridGap))
 
-                    // 开源致敬：不放花哨图形，一句定位就够了
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "开源 · 自托管 · 零第三方 SDK",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.textMuted
-                        )
-                    }
 
                     Spacer(Modifier.height(Spacing.gridGap))
 

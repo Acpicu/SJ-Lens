@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -87,6 +88,7 @@ object Routes {
     const val LEDGER_ALL = "ledgerAll"
     const val RELATION_GRAPH = "relationGraph"
     const val QUICK_MEMO = "quickMemo"
+    const val OSINT_HUB = "osintHub"
 
     const val ARG_PERSON_ID = "personId"
     const val ARG_PLATFORM = "platform"
@@ -118,6 +120,7 @@ private data class BottomNavItem(
 
 private val bottomNavItems = listOf(
     BottomNavItem(Routes.HOME, "首页", Icons.Filled.Home),
+    BottomNavItem(Routes.OSINT_HUB, "OSINT", Icons.Filled.Search),
     BottomNavItem(Routes.UNCONFIRMED, "最近检查", Icons.Filled.Notifications),
     BottomNavItem(Routes.SETTINGS, "设置", Icons.Filled.Settings)
 )
@@ -421,6 +424,15 @@ fun AppNavigation() {
         composable(Routes.RELATION_GRAPH) {
             RelationGraphScreen(onBack = { navController.popBackStack() })
         }
+
+            composable(Routes.OSINT_HUB) {
+                com.sj.followclip.ui.osint.OsintHubScreen(
+                    onOpenLedger = { navController.navigate(Routes.LEDGER_ALL) },
+                    onOpenMemo = { navController.navigate(Routes.QUICK_MEMO) },
+                    onOpenGraph = { navController.navigate(Routes.RELATION_GRAPH) },
+                    onOpenAudit = { navController.navigate(Routes.EXPOSURE_AUDIT) }
+                )
+            }
 
             composable(Routes.QUICK_MEMO) {
                 QuickMemoScreen(onBack = { navController.popBackStack() })
