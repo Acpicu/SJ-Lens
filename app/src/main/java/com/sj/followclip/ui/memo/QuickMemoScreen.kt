@@ -43,6 +43,16 @@ fun QuickMemoScreen(onBack: () -> Unit) {
             },
             title = { Text("紧急速记", maxLines = 1) },
             actions = {
+                TextButton(onClick = {
+                    val dir = context.getExternalFilesDir(null)
+                    val f = java.io.File(dir, "sj-memos.json")
+                    val arr = org.json.JSONArray()
+                    QuickMemoStore.items.forEach {
+                        arr.put(org.json.JSONObject().put("text", it.text).put("at", it.at).put("done", it.done))
+                    }
+                    runCatching { f.writeText(arr.toString()) }
+                    android.widget.Toast.makeText(context, "已导出 ${f.absolutePath}", android.widget.Toast.LENGTH_LONG).show()
+                }) { Text("导出给电脑") }
                 if (done.isNotEmpty()) {
                     TextButton(onClick = { QuickMemoStore.clearDone(context) }) { Text("清已完成") }
                 }
